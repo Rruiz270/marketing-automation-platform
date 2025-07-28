@@ -1,28 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    }
-  ],
   "functions": {
     "pages/api/**/*.js": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "MONGODB_URI": "@mongodb_uri",
-    "JWT_SECRET": "@jwt_secret",
-    "GOOGLE_ADS_CLIENT_ID": "@google_ads_client_id",
-    "GOOGLE_ADS_CLIENT_SECRET": "@google_ads_client_secret",
-    "FACEBOOK_APP_ID": "@facebook_app_id",
-    "FACEBOOK_APP_SECRET": "@facebook_app_secret"
   }
 }
