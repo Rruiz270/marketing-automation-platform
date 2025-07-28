@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ApiConnectionManager from '../components/ApiConnectionManager';
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState('7d');
@@ -91,6 +92,7 @@ export default function Dashboard() {
               { id: 'overview', label: 'Overview', icon: '📊' },
               { id: 'automation', label: 'AI Automation', icon: '🤖' },
               { id: 'insights', label: 'Predictive Insights', icon: '🔮' },
+              { id: 'connections', label: 'API Connections', icon: '🔗' },
               { id: 'audit', label: 'Audit & Compliance', icon: '📋' }
             ].map(tab => (
               <button
@@ -432,6 +434,11 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* API Connections Tab */}
+        {activeTab === 'connections' && (
+          <ApiConnectionManager userId="demo_user" />
         )}
 
         {/* Audit & Compliance Tab */}
