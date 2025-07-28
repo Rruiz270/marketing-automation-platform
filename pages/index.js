@@ -275,7 +275,7 @@ export default function Dashboard() {
               <div style={{ display: 'grid', gap: '12px' }}>
                 <AutomationRuleCard 
                   name="Budget Auto-Scaling"
-                  description="Automatically increase budget by 25% when ROAS > 4.0 for 2 consecutive days"
+                  description="Automatically increase budget by 25% when ROAS &gt; 4.0 for 2 consecutive days"
                   status="active"
                   confidence={92}
                   executions={5}
@@ -291,7 +291,7 @@ export default function Dashboard() {
                 />
                 <AutomationRuleCard 
                   name="Competitive Response"
-                  description="Adjust bids when competitor spend increases by >30% in target keywords"
+                  description="Adjust bids when competitor spend increases by &gt;30% in target keywords"
                   status="paused"
                   confidence={75}
                   executions={0}
@@ -318,10 +318,10 @@ export default function Dashboard() {
                   <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Safe Mode Settings</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                      <input type="checkbox" defaultChecked /> Require approval for budget changes > $500
+                      <input type="checkbox" defaultChecked /> Require approval for budget changes &gt; $500
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                      <input type="checkbox" defaultChecked /> Enable emergency stop (ROAS < 1.5)
+                      <input type="checkbox" defaultChecked /> Enable emergency stop (ROAS &lt; 1.5)
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
                       <input type="checkbox" defaultChecked /> Daily spending limit: $2,000
@@ -344,7 +344,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div>
-                      <label style={{ fontSize: '12px', color: '#6b7280' }}>Block execution: <85% confidence</label>
+                      <label style={{ fontSize: '12px', color: '#6b7280' }}>Block execution: &lt;85% confidence</label>
                       <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '4px', height: '6px', marginTop: '4px' }}>
                         <div style={{ width: '84%', backgroundColor: '#ef4444', height: '100%', borderRadius: '4px' }} />
                       </div>
