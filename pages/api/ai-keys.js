@@ -173,6 +173,7 @@ export default async function handler(req, res) {
     }
 
     const { action, user_id, service, api_key, category } = req.body;
+    console.log('AI Keys API called with:', { action, user_id, service, api_key: api_key ? 'provided' : 'missing' });
 
     switch (action) {
       case 'get_ai_services':
@@ -189,35 +190,44 @@ export default async function handler(req, res) {
         });
 
       case 'save_api_key':
+        console.log('Saving API key for service:', service);
         if (!service || !api_key) {
+          console.log('Missing required fields:', { service, api_key: !!api_key });
           return res.status(400).json({ error: 'Service and API key are required' });
         }
 
         if (!AI_SERVICES[service]) {
+          console.log('Invalid service:', service, 'Available services:', Object.keys(AI_SERVICES));
           return res.status(400).json({ error: 'Invalid service' });
         }
 
-        const encryptedKey = encryptApiKey(api_key);
+        try {
+          const encryptedKey = encryptApiKey(api_key);
 
-        // Upsert API key
-        await AiApiKeys.findOneAndUpdate(
-          { user_id, service },
-          {
-            user_id,
-            service,
-            category: AI_SERVICES[service].category,
-            encrypted_api_key: encryptedKey,
-            service_name: AI_SERVICES[service].name,
-            status: 'active',
-            updated_at: new Date()
-          },
-          { upsert: true, new: true }
-        );
+          // Upsert API key
+          const result = await AiApiKeys.findOneAndUpdate(
+            { user_id, service },
+            {
+              user_id,
+              service,
+              category: AI_SERVICES[service].category,
+              encrypted_api_key: encryptedKey,
+              service_name: AI_SERVICES[service].name,
+              status: 'active',
+              updated_at: new Date()
+            },
+            { upsert: true, new: true }
+          );
 
-        return res.status(200).json({
-          success: true,
-          message: `${AI_SERVICES[service].name} API key saved successfully`
-        });
+          console.log('API key saved successfully for:', service);
+          return res.status(200).json({
+            success: true,
+            message: `${AI_SERVICES[service].name} API key saved successfully`
+          });
+        } catch (dbError) {
+          console.error('Database error when saving API key:', dbError);
+          return res.status(500).json({ error: 'Database error: ' + dbError.message });
+        }
 
       case 'test_api_key':
         if (!service) {

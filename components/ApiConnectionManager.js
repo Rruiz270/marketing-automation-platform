@@ -318,6 +318,8 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
 
     try {
       setLoading(true);
+      console.log('Saving API key for service:', serviceId);
+      
       const response = await fetch('/api/ai-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -329,13 +331,16 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         })
       });
       
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
+      
       if (data.success) {
         alert(data.message);
         closeAiServiceForm();
         loadAiKeys();
       } else {
-        alert('Error: ' + data.error);
+        alert('Error: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error saving AI API key:', error);
