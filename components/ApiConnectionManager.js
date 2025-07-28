@@ -4,6 +4,8 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
+  const [showConnectionForm, setShowConnectionForm] = useState(null);
+  const [formData, setFormData] = useState({});
 
   useEffect(() => {
     loadConnections();
@@ -53,39 +55,45 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
     }
   };
 
-  const connectPlatform = async (platform) => {
+  const openConnectionForm = (platform) => {
+    setShowConnectionForm(platform);
+    setFormData({});
+  };
+
+  const closeConnectionForm = () => {
+    setShowConnectionForm(null);
+    setFormData({});
+  };
+
+  const updateFormData = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const submitConnection = async (platform) => {
     try {
       setLoading(true);
       
-      // Get authorization URL
       const response = await fetch('/api/integrations/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'get_auth_url',
+          action: 'connect_with_credentials',
           platform: platform,
-          user_id: userId
+          user_id: userId,
+          credentials: formData
         })
       });
       
       const data = await response.json();
       if (data.success) {
-        // Open authorization URL in popup
-        const popup = window.open(
-          data.auth_url,
-          'oauth',
-          'width=600,height=600,scrollbars=yes,resizable=yes'
-        );
-        
-        // Listen for popup close (in real implementation, you'd handle the OAuth callback)
-        const checkClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkClosed);
-            // In a real implementation, the OAuth callback would handle token exchange
-            alert(`${platform} connection initiated. Please complete the authorization process.`);
-            loadConnections();
-          }
-        }, 1000);
+        alert(`${platform} connected successfully!`);
+        closeConnectionForm();
+        loadConnections();
+      } else {
+        alert('Connection failed: ' + data.error);
       }
     } catch (error) {
       console.error('Error connecting platform:', error);
@@ -212,6 +220,223 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
     { id: 'twitter_ads', name: 'Twitter Ads', icon: '🐦', color: '#1da1f2' },
     { id: 'tiktok_ads', name: 'TikTok Ads', icon: '🎵', color: '#000000' }
   ];
+
+  const platformRequirements = {
+    google_ads: {
+      title: 'Google Ads API Connection',
+      description: 'Connect your Google Ads account to sync campaign data and enable automated management.',
+      fields: [
+        { 
+          key: 'customer_id', 
+          label: 'Customer ID', 
+          type: 'text', 
+          placeholder: 'e.g., 123-456-7890',
+          required: true,
+          description: 'Found in your Google Ads account under Tools & Settings → Account Settings'
+        },
+        { 
+          key: 'developer_token', 
+          label: 'Developer Token', 
+          type: 'password', 
+          placeholder: 'Your Google Ads API developer token',
+          required: true,
+          description: 'Get this from Google Ads API Center (requires approval)'
+        },
+        { 
+          key: 'client_id', 
+          label: 'OAuth Client ID', 
+          type: 'text', 
+          placeholder: 'Your OAuth 2.0 Client ID',
+          required: true,
+          description: 'From Google Cloud Console → APIs & Services → Credentials'
+        },
+        { 
+          key: 'client_secret', 
+          label: 'OAuth Client Secret', 
+          type: 'password', 
+          placeholder: 'Your OAuth 2.0 Client Secret',
+          required: true,
+          description: 'From Google Cloud Console → APIs & Services → Credentials'
+        },
+        { 
+          key: 'refresh_token', 
+          label: 'Refresh Token', 
+          type: 'password', 
+          placeholder: 'OAuth refresh token (optional)',
+          required: false,
+          description: 'Will be generated during OAuth flow if not provided'
+        }
+      ]
+    },
+    facebook_ads: {
+      title: 'Meta (Facebook) Ads API Connection',
+      description: 'Connect your Facebook Business Manager to sync ad campaigns and automate marketing activities.',
+      fields: [
+        { 
+          key: 'ad_account_id', 
+          label: 'Ad Account ID', 
+          type: 'text', 
+          placeholder: 'act_1234567890123456',
+          required: true,
+          description: 'Found in Facebook Ads Manager URL or Business Settings'
+        },
+        { 
+          key: 'app_id', 
+          label: 'Facebook App ID', 
+          type: 'text', 
+          placeholder: 'Your Facebook App ID',
+          required: true,
+          description: 'From Facebook for Developers → Your App → Settings → Basic'
+        },
+        { 
+          key: 'app_secret', 
+          label: 'Facebook App Secret', 
+          type: 'password', 
+          placeholder: 'Your Facebook App Secret',
+          required: true,
+          description: 'From Facebook for Developers → Your App → Settings → Basic'
+        },
+        { 
+          key: 'access_token', 
+          label: 'Access Token', 
+          type: 'password', 
+          placeholder: 'Long-lived user access token',
+          required: true,
+          description: 'Generate using Facebook\'s Access Token Tool with ads_management permissions'
+        },
+        { 
+          key: 'business_id', 
+          label: 'Business Manager ID', 
+          type: 'text', 
+          placeholder: 'Your Business Manager ID (optional)',
+          required: false,
+          description: 'Found in Business Settings → Business Info'
+        }
+      ]
+    },
+    tiktok_ads: {
+      title: 'TikTok Ads API Connection',
+      description: 'Connect your TikTok for Business account to manage and optimize your TikTok advertising campaigns.',
+      fields: [
+        { 
+          key: 'app_id', 
+          label: 'TikTok App ID', 
+          type: 'text', 
+          placeholder: 'Your TikTok for Business App ID',
+          required: true,
+          description: 'From TikTok for Business → Developer Portal → Your App'
+        },
+        { 
+          key: 'secret', 
+          label: 'App Secret', 
+          type: 'password', 
+          placeholder: 'Your TikTok App Secret',
+          required: true,
+          description: 'From TikTok for Business → Developer Portal → Your App'
+        },
+        { 
+          key: 'advertiser_id', 
+          label: 'Advertiser ID', 
+          type: 'text', 
+          placeholder: 'Your TikTok Advertiser ID',
+          required: true,
+          description: 'Found in TikTok Ads Manager → Settings → Account Info'
+        },
+        { 
+          key: 'access_token', 
+          label: 'Access Token', 
+          type: 'password', 
+          placeholder: 'Long-term access token',
+          required: true,
+          description: 'Obtain through TikTok\'s OAuth flow with required permissions'
+        }
+      ]
+    },
+    linkedin_ads: {
+      title: 'LinkedIn Ads API Connection',
+      description: 'Connect your LinkedIn Campaign Manager to automate B2B advertising campaigns and lead generation.',
+      fields: [
+        { 
+          key: 'client_id', 
+          label: 'LinkedIn App Client ID', 
+          type: 'text', 
+          placeholder: 'Your LinkedIn App Client ID',
+          required: true,
+          description: 'From LinkedIn Developer Portal → Your App → Auth'
+        },
+        { 
+          key: 'client_secret', 
+          label: 'Client Secret', 
+          type: 'password', 
+          placeholder: 'Your LinkedIn App Client Secret',
+          required: true,
+          description: 'From LinkedIn Developer Portal → Your App → Auth'
+        },
+        { 
+          key: 'account_id', 
+          label: 'Ad Account ID', 
+          type: 'text', 
+          placeholder: 'Sponsored account ID',
+          required: true,
+          description: 'Found in LinkedIn Campaign Manager → Account Assets → Accounts'
+        },
+        { 
+          key: 'access_token', 
+          label: 'Access Token', 
+          type: 'password', 
+          placeholder: 'OAuth 2.0 access token',
+          required: true,
+          description: 'Generated through LinkedIn OAuth with advertising permissions'
+        }
+      ]
+    },
+    twitter_ads: {
+      title: 'Twitter Ads API Connection',
+      description: 'Connect your Twitter Ads account to manage promoted tweets, campaigns, and audience targeting.',
+      fields: [
+        { 
+          key: 'api_key', 
+          label: 'Twitter API Key', 
+          type: 'text', 
+          placeholder: 'Your Twitter API Key',
+          required: true,
+          description: 'From Twitter Developer Portal → Your App → Keys and Tokens'
+        },
+        { 
+          key: 'api_secret', 
+          label: 'API Secret Key', 
+          type: 'password', 
+          placeholder: 'Your Twitter API Secret Key',
+          required: true,
+          description: 'From Twitter Developer Portal → Your App → Keys and Tokens'
+        },
+        { 
+          key: 'access_token', 
+          label: 'Access Token', 
+          type: 'password', 
+          placeholder: 'Your Twitter Access Token',
+          required: true,
+          description: 'From Twitter Developer Portal → Your App → Keys and Tokens'
+        },
+        { 
+          key: 'access_token_secret', 
+          label: 'Access Token Secret', 
+          type: 'password', 
+          placeholder: 'Your Twitter Access Token Secret',
+          required: true,
+          description: 'From Twitter Developer Portal → Your App → Keys and Tokens'
+        },
+        { 
+          key: 'account_id', 
+          label: 'Ads Account ID', 
+          type: 'text', 
+          placeholder: 'Your Twitter Ads Account ID',
+          required: true,
+          description: 'Found in Twitter Ads Manager → Settings → Account Settings'
+        }
+      ]
+    }
+  };
 
   const connectedPlatformIds = connections.map(c => c.platform);
 
@@ -380,7 +605,7 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                   </div>
                 ) : (
                   <button
-                    onClick={() => connectPlatform(platform.id)}
+                    onClick={() => openConnectionForm(platform.id)}
                     disabled={loading}
                     style={{
                       backgroundColor: platform.color,
@@ -441,6 +666,153 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
           </li>
         </ol>
       </div>
+
+      {/* Connection Form Modal */}
+      {showConnectionForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {(() => {
+              const platformInfo = platformRequirements[showConnectionForm];
+              if (!platformInfo) return null;
+
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
+                      {platformInfo.title}
+                    </h2>
+                    <button 
+                      onClick={closeConnectionForm}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '24px',
+                        cursor: 'pointer',
+                        color: '#6b7280'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+                    {platformInfo.description}
+                  </p>
+
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    submitConnection(showConnectionForm);
+                  }}>
+                    {platformInfo.fields.map((field) => (
+                      <div key={field.key} style={{ marginBottom: '20px' }}>
+                        <label style={{
+                          display: 'block',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          marginBottom: '4px',
+                          color: '#374151'
+                        }}>
+                          {field.label}
+                          {field.required && <span style={{ color: '#ef4444' }}> *</span>}
+                        </label>
+                        
+                        <input
+                          type={field.type}
+                          placeholder={field.placeholder}
+                          required={field.required}
+                          value={formData[field.key] || ''}
+                          onChange={(e) => updateFormData(field.key, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            backgroundColor: 'white',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                        
+                        <p style={{
+                          fontSize: '12px',
+                          color: '#6b7280',
+                          margin: '4px 0 0 0',
+                          lineHeight: '1.4'
+                        }}>
+                          {field.description}
+                        </p>
+                      </div>
+                    ))}
+
+                    <div style={{
+                      display: 'flex',
+                      gap: '12px',
+                      justifyContent: 'flex-end',
+                      marginTop: '32px',
+                      paddingTop: '20px',
+                      borderTop: '1px solid #e5e7eb'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={closeConnectionForm}
+                        disabled={loading}
+                        style={{
+                          backgroundColor: 'white',
+                          color: '#374151',
+                          border: '1px solid #d1d5db',
+                          padding: '10px 20px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '10px 20px',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          opacity: loading ? 0.5 : 1
+                        }}
+                      >
+                        {loading ? 'Connecting...' : `Connect ${availablePlatforms.find(p => p.id === showConnectionForm)?.name}`}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
