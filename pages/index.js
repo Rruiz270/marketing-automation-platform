@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ApiConnectionManager from '../components/ApiConnectionManager';
+import AiCreativeGenerator from '../components/AiCreativeGenerator';
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState('7d');
@@ -303,14 +304,7 @@ export default function Dashboard() {
             </div>
 
             {/* AI Creative Generator */}
-            <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>🎨 AI Creative Generator</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                <CreativeGeneratorCard type="text" title="Text Ads" description="Generate compelling headlines and descriptions" />
-                <CreativeGeneratorCard type="image" title="Image Ads" description="DALL-E powered visual creatives" />
-                <CreativeGeneratorCard type="video" title="Video Ads" description="AI-generated video with synthetic voices" />
-              </div>
-            </div>
+            <AiCreativeGenerator userId="demo_user" />
 
             {/* Budget Automation */}
             <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
