@@ -11,12 +11,45 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
   const [showAiServiceForm, setShowAiServiceForm] = useState(null);
   const [activeSection, setActiveSection] = useState('advertising');
 
+  // Static fallback AI services in case API fails
+  const staticAiServices = {
+    text: [
+      { id: 'openai', name: 'OpenAI GPT-4', description: 'Industry-leading AI for copywriting, content creation, and marketing copy', website: 'https://platform.openai.com/api-keys', keyFormat: 'sk-...' },
+      { id: 'claude', name: 'Claude (Anthropic)', description: 'Advanced AI assistant excellent for marketing and creative writing', website: 'https://console.anthropic.com/', keyFormat: 'sk-ant-...' },
+      { id: 'jasper', name: 'Jasper AI', description: 'Marketing-focused AI writer with templates for ads and campaigns', website: 'https://app.jasper.ai/settings/billing', keyFormat: 'Bearer token' },
+      { id: 'copyai', name: 'Copy.ai', description: 'Specialized AI for marketing copy, social media, and ad content', website: 'https://app.copy.ai/settings/api', keyFormat: 'API key' },
+      { id: 'writesonic', name: 'Writesonic', description: 'AI writer for marketing and sales copy with SEO optimization', website: 'https://app.writesonic.com/setting/api-keys', keyFormat: 'API key' }
+    ],
+    video: [
+      { id: 'google_veo', name: 'Google Veo', description: 'Advanced AI video generation by Google DeepMind', website: 'https://cloud.google.com/vertex-ai', keyFormat: 'Service account JSON' },
+      { id: 'runwayml', name: 'RunwayML', description: 'Professional AI video editing and generation platform', website: 'https://app.runwayml.com/account', keyFormat: 'API key' },
+      { id: 'pika', name: 'Pika Labs', description: 'AI video generation from text prompts and images', website: 'https://pika.art/', keyFormat: 'API key' },
+      { id: 'synthesia', name: 'Synthesia', description: 'AI avatar videos with realistic human presenters', website: 'https://app.synthesia.io/settings/api', keyFormat: 'API key' },
+      { id: 'stable_video', name: 'Stable Video Diffusion', description: 'Open-source AI video generation and editing', website: 'https://stability.ai/api', keyFormat: 'sk-...' }
+    ],
+    audio: [
+      { id: 'elevenlabs', name: 'ElevenLabs', description: 'Best-in-class voice cloning and text-to-speech', website: 'https://elevenlabs.io/settings/api-keys', keyFormat: 'API key' },
+      { id: 'murf', name: 'Murf AI', description: 'Professional AI voiceovers with realistic human voices', website: 'https://murf.ai/settings/api', keyFormat: 'API key' },
+      { id: 'speechify', name: 'Speechify', description: 'High-quality text-to-speech for marketing content', website: 'https://speechify.com/api', keyFormat: 'API key' },
+      { id: 'aiva', name: 'AIVA', description: 'AI music composition for video and audio content', website: 'https://aiva.ai/api', keyFormat: 'API key' },
+      { id: 'soundraw', name: 'Soundraw', description: 'AI-generated music and sound effects for marketing', website: 'https://soundraw.io/api', keyFormat: 'API key' }
+    ]
+  };
+
   useEffect(() => {
     loadConnections();
     loadSyncStatus();
-    loadAiServices();
+    loadAiServices(); // Load AI services immediately
     loadAiKeys();
   }, []);
+
+  // Also load AI services when component mounts or when activeSection changes to 'ai'
+  useEffect(() => {
+    if (activeSection === 'ai' && Object.keys(aiServices).length === 0) {
+      console.log('Loading AI services because section is ai and services are empty');
+      loadAiServices();
+    }
+  }, [activeSection]);
 
   const loadConnections = async () => {
     try {
@@ -74,14 +107,18 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
       
       const data = await response.json();
       console.log('AI Services API Response:', data);
-      if (data.success) {
+      if (data.success && data.data) {
         setAiServices(data.data);
         console.log('AI Services set:', data.data);
       } else {
         console.error('AI Services API error:', data.error);
+        console.log('Using static AI services as fallback');
+        setAiServices(staticAiServices);
       }
     } catch (error) {
       console.error('Error loading AI services:', error);
+      console.log('Using static AI services as fallback');
+      setAiServices(staticAiServices);
     }
   };
 
