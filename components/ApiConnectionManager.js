@@ -73,8 +73,12 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
       });
       
       const data = await response.json();
+      console.log('AI Services API Response:', data);
       if (data.success) {
         setAiServices(data.data);
+        console.log('AI Services set:', data.data);
+      } else {
+        console.error('AI Services API error:', data.error);
       }
     } catch (error) {
       console.error('Error loading AI services:', error);
@@ -838,20 +842,25 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
           <div style={{ marginBottom: '32px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>AI Creative Services</h3>
             <div style={{ display: 'grid', gap: '24px' }}>
-              {['text', 'video', 'audio'].map(category => (
-                <div key={category} style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '20px',
-                  backgroundColor: '#f8fafc'
-                }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', textTransform: 'capitalize' }}>
-                    {category === 'text' ? '✍️ Text & Copywriting' : 
-                     category === 'video' ? '🎥 Video Creation' : 
-                     '🎵 Audio Creation'}
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-                    {aiServices[category]?.map(service => {
+              {['text', 'video', 'audio'].map(category => {
+                console.log(`Rendering category ${category}, services:`, aiServices[category]);
+                return (
+                  <div key={category} style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    backgroundColor: '#f8fafc'
+                  }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', textTransform: 'capitalize' }}>
+                      {category === 'text' ? '✍️ Text & Copywriting' : 
+                       category === 'video' ? '🎥 Video Creation' : 
+                       '🎵 Audio Creation'}
+                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 'normal', marginLeft: '8px' }}>
+                        ({aiServices[category]?.length || 0} services)
+                      </span>
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                      {aiServices[category]?.length ? aiServices[category].map(service => {
                       const isConnected = isAiServiceConnected(service.id);
                       const status = getAiServiceStatus(service.id);
                       
@@ -941,10 +950,20 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                           </div>
                         </div>
                       );
-                    })}
+                    }) : (
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '20px',
+                        color: '#6b7280',
+                        fontSize: '14px'
+                      }}>
+                        No services loaded for {category}
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>
