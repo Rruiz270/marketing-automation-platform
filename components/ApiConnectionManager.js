@@ -611,7 +611,12 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
             🎯 Advertising Platforms
           </button>
           <button
-            onClick={() => setActiveSection('ai')}
+            onClick={() => {
+              setActiveSection('ai');
+              if (Object.keys(aiServices).length === 0) {
+                loadAiServices();
+              }
+            }}
             style={{
               padding: '12px 24px',
               border: 'none',

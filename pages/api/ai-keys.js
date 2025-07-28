@@ -252,6 +252,7 @@ export default async function handler(req, res) {
         });
 
       case 'get_services_by_category':
+        console.log('get_services_by_category called');
         const servicesByCategory = {};
         Object.keys(AI_SERVICES).forEach(key => {
           const service = AI_SERVICES[key];
@@ -264,6 +265,7 @@ export default async function handler(req, res) {
           });
         });
 
+        console.log('Services by category:', servicesByCategory);
         return res.status(200).json({
           success: true,
           data: servicesByCategory
