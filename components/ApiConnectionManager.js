@@ -6,10 +6,16 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
   const [syncStatus, setSyncStatus] = useState(null);
   const [showConnectionForm, setShowConnectionForm] = useState(null);
   const [formData, setFormData] = useState({});
+  const [aiServices, setAiServices] = useState({});
+  const [aiKeys, setAiKeys] = useState([]);
+  const [showAiServiceForm, setShowAiServiceForm] = useState(null);
+  const [activeSection, setActiveSection] = useState('advertising');
 
   useEffect(() => {
     loadConnections();
     loadSyncStatus();
+    loadAiServices();
+    loadAiKeys();
   }, []);
 
   const loadConnections = async () => {
@@ -52,6 +58,46 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
       }
     } catch (error) {
       console.error('Error loading sync status:', error);
+    }
+  };
+
+  const loadAiServices = async () => {
+    try {
+      const response = await fetch('/api/ai-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_services_by_category',
+          user_id: userId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setAiServices(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading AI services:', error);
+    }
+  };
+
+  const loadAiKeys = async () => {
+    try {
+      const response = await fetch('/api/ai-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_user_keys',
+          user_id: userId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setAiKeys(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading AI keys:', error);
     }
   };
 
@@ -211,6 +257,84 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openAiServiceForm = (serviceId) => {
+    setShowAiServiceForm(serviceId);
+    setFormData({});
+  };
+
+  const closeAiServiceForm = () => {
+    setShowAiServiceForm(null);
+    setFormData({});
+  };
+
+  const saveAiApiKey = async (serviceId) => {
+    if (!formData.apiKey) {
+      alert('Please enter your API key');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/ai-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_api_key',
+          user_id: userId,
+          service: serviceId,
+          api_key: formData.apiKey
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert(data.message);
+        closeAiServiceForm();
+        loadAiKeys();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error saving AI API key:', error);
+      alert('Error saving API key: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testAiApiKey = async (serviceId) => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/ai-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'test_api_key',
+          user_id: userId,
+          service: serviceId
+        })
+      });
+      
+      const data = await response.json();
+      alert(data.message);
+      loadAiKeys();
+    } catch (error) {
+      console.error('Error testing AI API key:', error);
+      alert('Error testing API key: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isAiServiceConnected = (serviceId) => {
+    return aiKeys.some(key => key.service === serviceId && key.status === 'active');
+  };
+
+  const getAiServiceStatus = (serviceId) => {
+    const key = aiKeys.find(key => key.service === serviceId);
+    return key ? key.status : 'not_configured';
   };
 
   const availablePlatforms = [
@@ -464,6 +588,42 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         </div>
       </div>
 
+      {/* Section Tabs */}
+      <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '0' }}>
+          <button
+            onClick={() => setActiveSection('advertising')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              borderBottom: activeSection === 'advertising' ? '2px solid #3b82f6' : '2px solid transparent',
+              color: activeSection === 'advertising' ? '#3b82f6' : '#6b7280',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            🎯 Advertising Platforms
+          </button>
+          <button
+            onClick={() => setActiveSection('ai')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              borderBottom: activeSection === 'ai' ? '2px solid #3b82f6' : '2px solid transparent',
+              color: activeSection === 'ai' ? '#3b82f6' : '#6b7280',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            🤖 AI Creative Services
+          </button>
+        </div>
+      </div>
+
       {/* Connection Status Overview */}
       {syncStatus && (
         <div style={{ 
@@ -500,9 +660,12 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         </div>
       )}
 
-      {/* Available Platforms */}
-      <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Available Platforms</h3>
+      {/* Advertising Platforms Section */}
+      {activeSection === 'advertising' && (
+        <>
+          {/* Available Platforms */}
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Available Platforms</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
           {availablePlatforms.map(platform => {
             const isConnected = connectedPlatformIds.includes(platform.id);
@@ -666,6 +829,126 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
           </li>
         </ol>
       </div>
+        </>
+      )}
+
+      {/* AI Services Section */}
+      {activeSection === 'ai' && (
+        <>
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>AI Creative Services</h3>
+            <div style={{ display: 'grid', gap: '24px' }}>
+              {['text', 'video', 'audio'].map(category => (
+                <div key={category} style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '20px',
+                  backgroundColor: '#f8fafc'
+                }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', textTransform: 'capitalize' }}>
+                    {category === 'text' ? '✍️ Text & Copywriting' : 
+                     category === 'video' ? '🎥 Video Creation' : 
+                     '🎵 Audio Creation'}
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                    {aiServices[category]?.map(service => {
+                      const isConnected = isAiServiceConnected(service.id);
+                      const status = getAiServiceStatus(service.id);
+                      
+                      return (
+                        <div
+                          key={service.id}
+                          style={{
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            padding: '16px',
+                            backgroundColor: isConnected ? '#f0fdf4' : 'white'
+                          }}
+                        >
+                          <div style={{ marginBottom: '12px' }}>
+                            <h5 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                              {service.name}
+                            </h5>
+                            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>
+                              {service.description}
+                            </p>
+                          </div>
+
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            marginBottom: '12px',
+                            fontSize: '12px',
+                            color: status === 'active' ? '#059669' : status === 'error' ? '#dc2626' : '#6b7280'
+                          }}>
+                            <span style={{ 
+                              width: '8px', 
+                              height: '8px', 
+                              borderRadius: '50%', 
+                              backgroundColor: status === 'active' ? '#10b981' : status === 'error' ? '#ef4444' : '#9ca3af',
+                              marginRight: '6px'
+                            }} />
+                            {status === 'active' ? 'Connected' : status === 'error' ? 'Connection Error' : 'Not Connected'}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {!isConnected ? (
+                              <button
+                                onClick={() => openAiServiceForm(service.id)}
+                                style={{
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '6px 12px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Add API Key
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => testAiApiKey(service.id)}
+                                disabled={loading}
+                                style={{
+                                  backgroundColor: 'white',
+                                  color: '#374151',
+                                  border: '1px solid #d1d5db',
+                                  padding: '6px 12px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Test
+                              </button>
+                            )}
+                            
+                            <a
+                              href={service.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: '#3b82f6',
+                                fontSize: '12px',
+                                textDecoration: 'none',
+                                padding: '6px 0'
+                              }}
+                            >
+                              Get API Key →
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Connection Form Modal */}
       {showConnectionForm && (
@@ -807,6 +1090,103 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                       </button>
                     </div>
                   </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* AI Service Form Modal */}
+      {showAiServiceForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            {(() => {
+              const service = Object.values(aiServices).flat().find(s => s.id === showAiServiceForm);
+              if (!service) return null;
+
+              return (
+                <>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+                    Add API Key for {service.name}
+                  </h3>
+                  
+                  <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                    {service.description}
+                  </p>
+                  
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      placeholder={`Enter your ${service.name} API key`}
+                      value={formData.apiKey || ''}
+                      onChange={(e) => setFormData({...formData, apiKey: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                      Expected format: {service.keyFormat}
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={closeAiServiceForm}
+                      style={{
+                        backgroundColor: 'white',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => saveAiApiKey(showAiServiceForm)}
+                      disabled={loading || !formData.apiKey}
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        cursor: loading || !formData.apiKey ? 'not-allowed' : 'pointer',
+                        opacity: loading || !formData.apiKey ? 0.5 : 1
+                      }}
+                    >
+                      {loading ? 'Saving...' : 'Save API Key'}
+                    </button>
+                  </div>
                 </>
               );
             })()}

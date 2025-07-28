@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react';
 
 export default function AiCreativeGenerator({ userId = 'demo_user' }) {
   const [activeTab, setActiveTab] = useState('text');
-  const [services, setServices] = useState({});
   const [userKeys, setUserKeys] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showApiKeyForm, setShowApiKeyForm] = useState(null);
-  const [apiKeyData, setApiKeyData] = useState({});
   const [generationHistory, setGenerationHistory] = useState([]);
   const [usageStats, setUsageStats] = useState(null);
   
@@ -17,31 +14,10 @@ export default function AiCreativeGenerator({ userId = 'demo_user' }) {
   const [generationResult, setGenerationResult] = useState(null);
 
   useEffect(() => {
-    loadAiServices();
     loadUserKeys();
     loadGenerationHistory();
     loadUsageStats();
   }, []);
-
-  const loadAiServices = async () => {
-    try {
-      const response = await fetch('/api/ai-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get_services_by_category',
-          user_id: userId
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setServices(data.data);
-      }
-    } catch (error) {
-      console.error('Error loading AI services:', error);
-    }
-  };
 
   const loadUserKeys = async () => {
     try {
@@ -103,75 +79,6 @@ export default function AiCreativeGenerator({ userId = 'demo_user' }) {
     }
   };
 
-  const openApiKeyForm = (serviceId) => {
-    setShowApiKeyForm(serviceId);
-    setApiKeyData({});
-  };
-
-  const closeApiKeyForm = () => {
-    setShowApiKeyForm(null);
-    setApiKeyData({});
-  };
-
-  const saveApiKey = async (serviceId) => {
-    if (!apiKeyData.apiKey) {
-      alert('Please enter your API key');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch('/api/ai-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'save_api_key',
-          user_id: userId,
-          service: serviceId,
-          api_key: apiKeyData.apiKey
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        alert(data.message);
-        closeApiKeyForm();
-        loadUserKeys();
-      } else {
-        alert('Error: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error saving API key:', error);
-      alert('Error saving API key: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const testApiKey = async (serviceId) => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/ai-keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'test_api_key',
-          user_id: userId,
-          service: serviceId
-        })
-      });
-      
-      const data = await response.json();
-      alert(data.message);
-      loadUserKeys();
-    } catch (error) {
-      console.error('Error testing API key:', error);
-      alert('Error testing API key: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const generateContent = async () => {
     if (!selectedService || !prompt) {
       alert('Please select a service and enter a prompt');
@@ -210,13 +117,21 @@ export default function AiCreativeGenerator({ userId = 'demo_user' }) {
     }
   };
 
-  const isServiceConnected = (serviceId) => {
-    return userKeys.some(key => key.service === serviceId && key.status === 'active');
-  };
-
-  const getServiceStatus = (serviceId) => {
-    const key = userKeys.find(key => key.service === serviceId);
-    return key ? key.status : 'not_configured';
+  const getActiveServicesByCategory = () => {
+    const activeKeys = userKeys.filter(key => key.status === 'active');
+    const servicesByCategory = {
+      text: [],
+      video: [],
+      audio: []
+    };
+    
+    activeKeys.forEach(key => {
+      if (servicesByCategory[key.category]) {
+        servicesByCategory[key.category].push(key);
+      }
+    });
+    
+    return servicesByCategory;
   };
 
   const tabs = [
@@ -268,116 +183,105 @@ export default function AiCreativeGenerator({ userId = 'demo_user' }) {
         </div>
       </div>
 
-      {/* AI Services Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px', marginBottom: '32px' }}>
-        {services[activeTab]?.map(service => {
-          const isConnected = isServiceConnected(service.id);
-          const status = getServiceStatus(service.id);
-          
+      {/* Active AI Services */}
+      {(() => {
+        const activeServices = getActiveServicesByCategory();
+        const currentServices = activeServices[activeTab] || [];
+        
+        if (currentServices.length === 0) {
           return (
-            <div
-              key={service.id}
-              style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '16px',
-                backgroundColor: isConnected ? '#f0fdf4' : 'white'
-              }}
-            >
-              <div style={{ marginBottom: '12px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
-                  {service.name}
-                </h3>
-                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>
-                  {service.description}
-                </p>
-              </div>
-
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                marginBottom: '12px',
-                fontSize: '12px',
-                color: status === 'active' ? '#059669' : status === 'error' ? '#dc2626' : '#6b7280'
-              }}>
-                <span style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  backgroundColor: status === 'active' ? '#10b981' : status === 'error' ? '#ef4444' : '#9ca3af',
-                  marginRight: '6px'
-                }} />
-                {status === 'active' ? 'Connected' : status === 'error' ? 'Connection Error' : 'Not Connected'}
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {!isConnected ? (
-                  <button
-                    onClick={() => openApiKeyForm(service.id)}
-                    style={{
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
-                      border: 'none',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Add API Key
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => testApiKey(service.id)}
-                      disabled={loading}
-                      style={{
-                        backgroundColor: 'white',
-                        color: '#374151',
-                        border: '1px solid #d1d5db',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Test
-                    </button>
-                    <button
-                      onClick={() => setSelectedService(service.id)}
-                      style={{
-                        backgroundColor: selectedService === service.id ? '#059669' : '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {selectedService === service.id ? 'Selected' : 'Select'}
-                    </button>
-                  </>
-                )}
-                
-                <a
-                  href={service.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: '#3b82f6',
-                    fontSize: '12px',
-                    textDecoration: 'none',
-                    padding: '6px 0'
-                  }}
-                >
-                  Get API Key →
-                </a>
-              </div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '2px dashed #e5e7eb',
+              marginBottom: '32px'
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: '#374151' }}>
+                No {activeTab} services connected
+              </h3>
+              <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 16px 0' }}>
+                Connect AI services in the API Connections tab to start generating content
+              </p>
+              <button
+                onClick={() => {
+                  alert('Please go to API Connections tab → AI Creative Services to add your AI service API keys');
+                }}
+                style={{
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Connect AI Services
+              </button>
             </div>
           );
-        })}
-      </div>
+        }
+
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+            {currentServices.map(service => (
+              <div
+                key={service.service}
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  backgroundColor: '#f0fdf4'
+                }}
+              >
+                <div style={{ marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                    {service.service_name}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>
+                    Last used: {service.last_used ? new Date(service.last_used).toLocaleDateString() : 'Never'}
+                  </p>
+                </div>
+
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  marginBottom: '12px',
+                  fontSize: '12px',
+                  color: '#059669'
+                }}>
+                  <span style={{ 
+                    width: '8px', 
+                    height: '8px', 
+                    borderRadius: '50%', 
+                    backgroundColor: '#10b981',
+                    marginRight: '6px'
+                  }} />
+                  Connected • {service.usage_count || 0} generations
+                </div>
+
+                <button
+                  onClick={() => setSelectedService(service.service)}
+                  style={{
+                    backgroundColor: selectedService === service.service ? '#059669' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                >
+                  {selectedService === service.service ? '✓ Selected for Generation' : `Use ${service.service_name}`}
+                </button>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Generation Interface */}
       {selectedService && (
@@ -389,7 +293,7 @@ export default function AiCreativeGenerator({ userId = 'demo_user' }) {
           marginBottom: '24px'
         }}>
           <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-            Generate with {services[activeTab]?.find(s => s.id === selectedService)?.name}
+            Generate with {userKeys.find(k => k.service === selectedService)?.service_name || selectedService}
           </h3>
           
           <div style={{ marginBottom: '16px' }}>
@@ -515,103 +419,6 @@ export default function AiCreativeGenerator({ userId = 'demo_user' }) {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* API Key Form Modal */}
-      {showApiKeyForm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%'
-          }}>
-            {(() => {
-              const service = Object.values(services).flat().find(s => s.id === showApiKeyForm);
-              if (!service) return null;
-
-              return (
-                <>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-                    Add API Key for {service.name}
-                  </h3>
-                  
-                  <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
-                    {service.description}
-                  </p>
-                  
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                      API Key
-                    </label>
-                    <input
-                      type="password"
-                      placeholder={`Enter your ${service.name} API key`}
-                      value={apiKeyData.apiKey || ''}
-                      onChange={(e) => setApiKeyData({...apiKeyData, apiKey: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                      Expected format: {service.keyFormat}
-                    </p>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={closeApiKeyForm}
-                      style={{
-                        backgroundColor: 'white',
-                        color: '#374151',
-                        border: '1px solid #d1d5db',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => saveApiKey(showApiKeyForm)}
-                      disabled={loading || !apiKeyData.apiKey}
-                      style={{
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        cursor: loading || !apiKeyData.apiKey ? 'not-allowed' : 'pointer',
-                        opacity: loading || !apiKeyData.apiKey ? 0.5 : 1
-                      }}
-                    >
-                      {loading ? 'Saving...' : 'Save API Key'}
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
         </div>
       )}
 
