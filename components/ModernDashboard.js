@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Import all components
 import CompanyOnboarding from './CompanyOnboarding';
 import AIConnectionHub from './AIConnectionHub';
+import AdvertisingPlatforms from './AdvertisingPlatforms';
 import CampaignWizard from './CampaignWizard';
 import PerformanceCenter from './PerformanceCenter';
 
@@ -51,8 +52,9 @@ const ModernDashboard = () => {
   const navigationItems = [
     { id: 'overview', label: 'Overview', icon: '🏠', description: 'Dashboard home' },
     { id: 'onboarding', label: 'Company Setup', icon: '🏢', description: 'Business profile setup', required: !userProgress.companySetup },
-    { id: 'ai-hub', label: 'AI Connections', icon: '🤖', description: 'Connect AI services', required: !userProgress.aiConnected },
-    { id: 'campaign-wizard', label: 'Campaign Builder', icon: '🎯', description: '7-step campaign creation', disabled: !userProgress.isOnboarded },
+    { id: 'ai-hub', label: 'AI Connections', icon: '🤖', description: 'Connect AI services (13 available)', required: !userProgress.aiConnected },
+    { id: 'advertising-platforms', label: 'Ad Platforms', icon: '📱', description: 'Google, Facebook, LinkedIn & more' },
+    { id: 'campaign-wizard', label: 'Campaign Builder', icon: '🎯', description: '7-step AI campaign creation' },
     { id: 'performance', label: 'Performance', icon: '📊', description: 'Analytics & insights', disabled: !userProgress.isOnboarded },
     { id: 'automation', label: 'Automation', icon: '⚡', description: 'Smart optimization', disabled: !userProgress.isOnboarded }
   ];
@@ -90,12 +92,13 @@ const ModernDashboard = () => {
   );
 
   const QuickStats = () => (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600">Connected AIs</p>
+            <p className="text-sm text-gray-600">AI Services</p>
             <p className="text-2xl font-bold text-gray-900">{connectedAIs.length}</p>
+            <p className="text-xs text-gray-500">13 available</p>
           </div>
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
             🤖
@@ -105,8 +108,21 @@ const ModernDashboard = () => {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <div>
+            <p className="text-sm text-gray-600">Ad Platforms</p>
+            <p className="text-2xl font-bold text-gray-900">0</p>
+            <p className="text-xs text-gray-500">8 available</p>
+          </div>
+          <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+            📱
+          </div>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <div>
             <p className="text-sm text-gray-600">Active Campaigns</p>
             <p className="text-2xl font-bold text-gray-900">{userProgress.campaignsCreated}</p>
+            <p className="text-xs text-gray-500">Ready to create</p>
           </div>
           <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
             🎯
@@ -116,8 +132,9 @@ const ModernDashboard = () => {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600">Setup Complete</p>
-            <p className="text-2xl font-bold text-gray-900">{userProgress.isOnboarded ? '100%' : '50%'}</p>
+            <p className="text-sm text-gray-600">Setup Progress</p>
+            <p className="text-2xl font-bold text-gray-900">{userProgress.isOnboarded ? '100%' : '75%'}</p>
+            <p className="text-xs text-gray-500">Almost ready</p>
           </div>
           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
             📈
@@ -133,6 +150,8 @@ const ModernDashboard = () => {
         return <CompanyOnboarding onComplete={() => checkUserProgress()} />;
       case 'ai-hub':
         return <AIConnectionHub onUpdate={() => checkUserProgress()} />;
+      case 'advertising-platforms':
+        return <AdvertisingPlatforms onUpdate={() => checkUserProgress()} />;
       case 'campaign-wizard':
         return <CampaignWizard connectedAIs={connectedAIs} />;
       case 'performance':
@@ -161,38 +180,46 @@ const ModernDashboard = () => {
             <QuickStats />
             <ProgressIndicator />
             
-            {!userProgress.isOnboarded && (
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-8 text-white text-center">
-                <h3 className="text-2xl font-bold mb-4">Get Started in 2 Simple Steps</h3>
-                <p className="mb-6 opacity-90">Complete your setup to unlock the full power of AI marketing automation</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  {!userProgress.companySetup && (
-                    <button 
-                      onClick={() => setCurrentView('onboarding')}
-                      className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                    >
-                      1. Setup Company Profile
-                    </button>
-                  )}
-                  {!userProgress.aiConnected && (
-                    <button 
-                      onClick={() => setCurrentView('ai-hub')}
-                      className="bg-white bg-opacity-20 text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-30 transition-colors"
-                    >
-                      2. Connect AI Services
-                    </button>
-                  )}
-                  {userProgress.isOnboarded && (
-                    <button 
-                      onClick={() => setCurrentView('campaign-wizard')}
-                      className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-                    >
-                      🚀 Start Creating Campaigns
-                    </button>
-                  )}
-                </div>
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-8 text-white text-center">
+              <h3 className="text-2xl font-bold mb-4">
+                {userProgress.isOnboarded ? 'Ready for AI Marketing Automation!' : 'Get Started with AI Marketing'}
+              </h3>
+              <p className="mb-6 opacity-90">
+                {userProgress.isOnboarded 
+                  ? 'All systems ready. Create your first AI-powered campaign now!'
+                  : 'Connect AI services and advertising platforms to unlock automated marketing'}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                {!userProgress.companySetup && (
+                  <button 
+                    onClick={() => setCurrentView('onboarding')}
+                    className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    📋 Setup Company Profile
+                  </button>
+                )}
+                {!userProgress.aiConnected && (
+                  <button 
+                    onClick={() => setCurrentView('ai-hub')}
+                    className="bg-white bg-opacity-20 text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-30 transition-colors"
+                  >
+                    🤖 Connect AI Services (13 available)
+                  </button>
+                )}
+                <button 
+                  onClick={() => setCurrentView('advertising-platforms')}
+                  className="bg-white bg-opacity-20 text-white px-6 py-3 rounded-lg font-semibold hover:bg-opacity-30 transition-colors"
+                >
+                  📱 Connect Ad Platforms
+                </button>
+                <button 
+                  onClick={() => setCurrentView('campaign-wizard')}
+                  className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  🚀 Build Campaigns Now
+                </button>
               </div>
-            )}
+            </div>
           </div>
         );
     }

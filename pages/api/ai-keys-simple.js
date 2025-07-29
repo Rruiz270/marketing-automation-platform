@@ -1,39 +1,98 @@
 // Persistent AI Keys API with localStorage fallback
 const AI_SERVICES = {
+  // TEXT/COPY AI SERVICES
   openai: {
     name: 'OpenAI GPT-4',
     category: 'text',
     description: 'Industry-leading AI for copywriting, content creation, and marketing copy',
     website: 'https://platform.openai.com/api-keys',
-    keyFormat: 'sk-...'
+    keyFormat: 'sk-proj-...'
   },
   claude: {
-    name: 'Claude (Anthropic)',
+    name: 'Claude AI',
     category: 'text', 
     description: 'Advanced AI assistant excellent for marketing and creative writing',
     website: 'https://console.anthropic.com/',
     keyFormat: 'sk-ant-...'
-  },
-  elevenlabs: {
-    name: 'ElevenLabs',
-    category: 'audio',
-    description: 'Best-in-class voice cloning and text-to-speech',
-    website: 'https://elevenlabs.io/settings/api-keys',
-    keyFormat: 'API key'
-  },
-  dalle: {
-    name: 'DALL-E 3',
-    category: 'video',
-    description: 'Advanced AI image generation for creative assets',
-    website: 'https://platform.openai.com/api-keys',
-    keyFormat: 'sk-...'
   },
   jasper: {
     name: 'Jasper AI',
     category: 'text',
     description: 'Marketing-focused AI writer with templates for ads and campaigns',
     website: 'https://app.jasper.ai/settings/billing',
-    keyFormat: 'Bearer token'
+    keyFormat: 'jasper-...'
+  },
+  'copy.ai': {
+    name: 'Copy.ai',
+    category: 'text',
+    description: 'AI copywriter for marketing and sales',
+    website: 'https://app.copy.ai/settings/api',
+    keyFormat: 'copy-...'
+  },
+  writesonic: {
+    name: 'Writesonic',
+    category: 'text',
+    description: 'AI writing assistant for content marketing',
+    website: 'https://writesonic.com/dashboard/api',
+    keyFormat: 'ws-...'
+  },
+  // VISUAL/VIDEO AI SERVICES
+  dalle: {
+    name: 'DALL-E 3',
+    category: 'visual',
+    description: 'Advanced AI image generation for creative assets',
+    website: 'https://platform.openai.com/api-keys',
+    keyFormat: 'sk-proj-...'
+  },
+  midjourney: {
+    name: 'Midjourney',
+    category: 'visual',
+    description: 'AI-powered artistic image generation',
+    website: 'https://docs.midjourney.com/docs/api',
+    keyFormat: 'mj-...'
+  },
+  'stable-diffusion': {
+    name: 'Stable Diffusion',
+    category: 'visual',
+    description: 'Open-source AI image generation',
+    website: 'https://stability.ai/developers',
+    keyFormat: 'sd-...'
+  },
+  runway: {
+    name: 'Runway ML',
+    category: 'video',
+    description: 'AI video generation and editing',
+    website: 'https://runwayml.com/api',
+    keyFormat: 'runway-...'
+  },
+  synthesia: {
+    name: 'Synthesia',
+    category: 'video',
+    description: 'AI video creation with avatars',
+    website: 'https://www.synthesia.io/api',
+    keyFormat: 'synth-...'
+  },
+  // AUDIO AI SERVICES
+  elevenlabs: {
+    name: 'ElevenLabs',
+    category: 'audio',
+    description: 'Best-in-class voice cloning and text-to-speech',
+    website: 'https://elevenlabs.io/settings/api-keys',
+    keyFormat: 'eleven-...'
+  },
+  murf: {
+    name: 'Murf AI',
+    category: 'audio',
+    description: 'Professional AI voice generator',
+    website: 'https://murf.ai/api',
+    keyFormat: 'murf-...'
+  },
+  speechify: {
+    name: 'Speechify',
+    category: 'audio',
+    description: 'AI text-to-speech and audio content',
+    website: 'https://speechify.com/api',
+    keyFormat: 'speech-...'
   }
 };
 

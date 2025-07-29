@@ -7,14 +7,16 @@ const AIConnectionHub = ({ onUpdate }) => {
   const [testingService, setTestingService] = useState(null);
 
   const aiServices = [
+    // TEXT/COPY AI SERVICES
     {
       id: 'openai',
-      name: 'OpenAI',
+      name: 'OpenAI GPT-4',
       description: 'GPT-4, DALL-E, and advanced language models',
       icon: '🤖',
       color: 'from-green-400 to-green-600',
       features: ['Text Generation', 'Image Creation', 'Code Writing', 'Analysis'],
-      placeholder: 'sk-proj-...'
+      placeholder: 'sk-proj-...',
+      category: 'text'
     },
     {
       id: 'claude',
@@ -23,7 +25,8 @@ const AIConnectionHub = ({ onUpdate }) => {
       icon: '🧠',
       color: 'from-purple-400 to-purple-600',
       features: ['Long Context', 'Research', 'Analysis', 'Writing'],
-      placeholder: 'claude-...'
+      placeholder: 'sk-ant-...',
+      category: 'text'
     },
     {
       id: 'jasper',
@@ -32,16 +35,110 @@ const AIConnectionHub = ({ onUpdate }) => {
       icon: '✍️',
       color: 'from-blue-400 to-blue-600',
       features: ['Marketing Copy', 'Blog Posts', 'Social Media', 'Ads'],
-      placeholder: 'jasper-...'
+      placeholder: 'jasper-...',
+      category: 'text'
+    },
+    {
+      id: 'copy.ai',
+      name: 'Copy.ai',
+      description: 'AI copywriter for marketing and sales',
+      icon: '📝',
+      color: 'from-orange-400 to-orange-600',
+      features: ['Sales Copy', 'Email Marketing', 'Product Descriptions', 'Headlines'],
+      placeholder: 'copy-...',
+      category: 'text'
+    },
+    {
+      id: 'writesonic',
+      name: 'Writesonic',
+      description: 'AI writing assistant for content marketing',
+      icon: '✨',
+      color: 'from-teal-400 to-teal-600',
+      features: ['Blog Writing', 'Ad Copy', 'Landing Pages', 'SEO Content'],
+      placeholder: 'ws-...',
+      category: 'text'
+    },
+    // VISUAL/VIDEO AI SERVICES
+    {
+      id: 'dalle',
+      name: 'DALL-E 3',
+      description: 'Advanced AI image generation',
+      icon: '🎨',
+      color: 'from-pink-400 to-pink-600',
+      features: ['Art Generation', 'Marketing Visuals', 'Product Images', 'Branding'],
+      placeholder: 'sk-proj-...',
+      category: 'visual'
     },
     {
       id: 'midjourney',
       name: 'Midjourney',
-      description: 'AI-powered image generation',
-      icon: '🎨',
-      color: 'from-pink-400 to-pink-600',
-      features: ['Art Generation', 'Concept Art', 'Marketing Visuals', 'Branding'],
-      placeholder: 'mj-...'
+      description: 'AI-powered artistic image generation',
+      icon: '🖼️',
+      color: 'from-indigo-400 to-indigo-600',
+      features: ['Concept Art', 'Creative Visuals', 'Brand Assets', 'Illustrations'],
+      placeholder: 'mj-...',
+      category: 'visual'
+    },
+    {
+      id: 'stable-diffusion',
+      name: 'Stable Diffusion',
+      description: 'Open-source AI image generation',
+      icon: '🌊',
+      color: 'from-cyan-400 to-cyan-600',
+      features: ['Custom Models', 'Fine-tuning', 'Commercial Use', 'High Resolution'],
+      placeholder: 'sd-...',
+      category: 'visual'
+    },
+    {
+      id: 'runway',
+      name: 'Runway ML',
+      description: 'AI video generation and editing',
+      icon: '🎬',
+      color: 'from-red-400 to-red-600',
+      features: ['Video Generation', 'Video Editing', 'Motion Graphics', 'Visual Effects'],
+      placeholder: 'runway-...',
+      category: 'video'
+    },
+    {
+      id: 'synthesia',
+      name: 'Synthesia',
+      description: 'AI video creation with avatars',
+      icon: '👤',
+      color: 'from-yellow-400 to-yellow-600',
+      features: ['AI Avatars', 'Video Production', 'Multilingual', 'Corporate Videos'],
+      placeholder: 'synth-...',
+      category: 'video'
+    },
+    // AUDIO AI SERVICES
+    {
+      id: 'elevenlabs',
+      name: 'ElevenLabs',
+      description: 'Best-in-class voice cloning and text-to-speech',
+      icon: '🎤',
+      color: 'from-violet-400 to-violet-600',
+      features: ['Voice Cloning', 'Text-to-Speech', 'Voice Over', 'Multilingual Audio'],
+      placeholder: 'eleven-...',
+      category: 'audio'
+    },
+    {
+      id: 'murf',
+      name: 'Murf AI',
+      description: 'Professional AI voice generator',
+      icon: '🎙️',
+      color: 'from-emerald-400 to-emerald-600',
+      features: ['Professional Voices', 'Studio Quality', 'Voice Editing', 'Commercial Use'],
+      placeholder: 'murf-...',
+      category: 'audio'
+    },
+    {
+      id: 'speechify',
+      name: 'Speechify',
+      description: 'AI text-to-speech and audio content',
+      icon: '🔊',
+      color: 'from-lime-400 to-lime-600',
+      features: ['Natural Voices', 'Speed Control', 'Audio Books', 'Accessibility'],
+      placeholder: 'speech-...',
+      category: 'audio'
     }
   ];
 
@@ -51,10 +148,17 @@ const AIConnectionHub = ({ onUpdate }) => {
 
   const loadConnections = async () => {
     try {
-      const response = await fetch('/api/ai-keys-simple');
+      const response = await fetch('/api/ai-keys-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_user_keys',
+          user_id: 'default_user'
+        })
+      });
       const data = await response.json();
       if (data.success) {
-        setConnections(data.keys || []);
+        setConnections(data.data || []);
       }
     } catch (error) {
       console.error('Error loading connections:', error);
@@ -72,6 +176,7 @@ const AIConnectionHub = ({ onUpdate }) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'save_api_key',
           service: serviceId,
           api_key: apiKey,
           user_id: 'default_user'
@@ -99,15 +204,17 @@ const AIConnectionHub = ({ onUpdate }) => {
     
     try {
       const response = await fetch('/api/ai-keys-simple', {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'disconnect_api_key',
           service: serviceId,
           user_id: 'default_user'
         })
       });
       
-      if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
         await loadConnections();
         onUpdate();
       }
@@ -123,16 +230,17 @@ const AIConnectionHub = ({ onUpdate }) => {
     
     try {
       const response = await fetch('/api/ai-keys-simple', {
-        method: 'PUT',  
+        method: 'POST',  
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'set_default_service',
           service: serviceId,
-          user_id: 'default_user',
-          set_default: true
+          user_id: 'default_user'
         })
       });
       
-      if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
         await loadConnections();
         onUpdate();
       }
