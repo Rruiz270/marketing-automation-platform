@@ -1,6 +1,8 @@
-# 🤖 AI Marketing Automation Platform - Alumni English School
+# 🎓 Alumni AI Marketing Platform
 
-Uma plataforma completa de automação de marketing com inteligência artificial, especialmente otimizada para escolas de inglês como a Alumni. Gerencie campanhas publicitárias, crie conteúdo automatizado e otimize performance com IA.
+**Professional-grade marketing automation with AI-powered campaign creation and optimization**
+
+A comprehensive marketing automation platform specifically designed for Alumni English School, featuring a complete 7-step AI campaign builder that transforms business objectives into high-performing marketing campaigns.
 
 ## 🚀 Deploy Rápido no Vercel
 
@@ -8,24 +10,29 @@ Uma plataforma completa de automação de marketing com inteligência artificial
 
 **🌐 Demo Live:** https://marketing-automation-platform-f8v9.vercel.app/
 
-## ✨ Funcionalidades Principais
+## ✨ Complete System Features
 
-### 🎯 **AI Campaign Generator (Novo!)**
-- **Gerador de Campanhas Específico para Alumni**: Prompts otimizados para escolas de inglês
-- **3 Etapas de Criação**: Setup → Revisão → Geração
-- **Conteúdo Multi-Plataforma**: Google Ads, Facebook, Instagram, LinkedIn, Email
-- **Sugestões Visuais**: Conceitos para imagens, vídeos e infográficos
-- **Estratégia de Campanha**: Planos de 6 semanas com alocação de orçamento
+### 🏢 **Company Registration System**
+- **Complete Business Profile**: Company info, products, pricing, competitors
+- **Market Analysis**: AI-powered insights based on company data
+- **Persistent Storage**: Secure data storage with file system backup
+- **Strategic Recommendations**: Customized marketing strategies
 
-### 🤖 **AI Automation Suite**
-1. **Coleta Automatizada de Dados**: APIs do Google Ads e Facebook
-2. **Detecção de Tendências**: Alertas inteligentes baseados em performance
-3. **Ajustes Automáticos de Orçamento**: Otimização com modo seguro
-4. **Geração de Criativos com IA**: DALL-E, texto e vídeos
-5. **Testes A/B Automatizados**: Implementação e análise contínua
-6. **Monitoramento de Concorrentes**: Scraping de bibliotecas de anúncios
-7. **Analytics Preditivos**: Forecasting com alertas de performance
-8. **Sistema de Auditoria**: Logs completos com níveis de confiança
+### 🎯 **7-Step AI Campaign Builder**
+- **Step 1: Strategy Translation** - Business objectives → Paid media strategy
+- **Step 2: Media Plan Builder** - AI-optimized plans with budget allocation
+- **Step 3: Copy Generation** - High-converting copy per channel/funnel
+- **Step 4: Creative Generator** - AI art/creative with correct formats
+- **Step 5: Campaign Structure** - Organized hierarchy ready for publishing
+- **Step 6: Platform Publisher** - Meta/Google Ads integration + setup guides
+- **Step 7: Performance Analysis** - AI insights with optimization recommendations
+
+### 🤖 **AI Service Integration**
+- **OpenAI GPT-4**: Strategy, copy, and performance analysis
+- **Claude (Anthropic)**: Advanced content creation and insights
+- **Multiple AI Support**: Switch between providers seamlessly
+- **Persistent API Management**: Secure key storage with toggle switches
+- **Default Service Selection**: Set preferred AI for automatic tasks
 
 ### 🔗 **Integrações de API**
 - **Plataformas de Anúncios**: Google Ads, Meta (Facebook/Instagram), TikTok, LinkedIn, Twitter
