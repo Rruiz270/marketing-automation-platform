@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ApiConnectionManager from '../components/ApiConnectionManager';
 import AiCreativeGenerator from '../components/AiCreativeGenerator';
+import AiCampaignGenerator from '../components/AiCampaignGenerator';
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState('7d');
@@ -91,6 +92,7 @@ export default function Dashboard() {
           <nav style={{ display: 'flex', gap: '32px' }}>
             {[
               { id: 'overview', label: 'Overview', icon: '📊' },
+              { id: 'campaign-generator', label: 'AI Campaign Generator', icon: '🎯' },
               { id: 'automation', label: 'AI Automation', icon: '🤖' },
               { id: 'insights', label: 'Predictive Insights', icon: '🔮' },
               { id: 'connections', label: 'API Connections', icon: '🔗' },
@@ -428,6 +430,11 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* AI Campaign Generator Tab */}
+        {activeTab === 'campaign-generator' && (
+          <AiCampaignGenerator userId="demo_user" />
         )}
 
         {/* API Connections Tab */}
