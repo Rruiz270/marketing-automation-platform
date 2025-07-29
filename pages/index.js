@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ApiConnectionManager from '../components/ApiConnectionManager';
 import AiCreativeGenerator from '../components/AiCreativeGenerator';
 import AiCampaignGenerator from '../components/AiCampaignGenerator';
+import RealTimeOptimization from '../components/RealTimeOptimization';
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState('7d');
@@ -263,6 +264,9 @@ export default function Dashboard() {
         {/* AI Automation Tab */}
         {activeTab === 'automation' && (
           <div style={{ display: 'grid', gap: '24px' }}>
+            {/* Real-Time Optimization */}
+            <RealTimeOptimization campaignId="demo_campaign" userId="demo_user" />
+            
             {/* Automation Rules */}
             <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
