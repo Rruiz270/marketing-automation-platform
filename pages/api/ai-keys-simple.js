@@ -218,9 +218,43 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'Service is required' });
         }
 
+        console.log('Set default service request:', { user_id, service });
+        console.log('Available stored keys:', Object.keys(storedKeys));
+        
         const defaultKeyId = `${user_id}_${service}`;
-        if (!storedKeys[defaultKeyId]) {
-          return res.status(404).json({ error: 'API key not found' });
+        console.log('Looking for key with ID:', defaultKeyId);
+        
+        // Try to find the key by the standard format first
+        let targetKey = storedKeys[defaultKeyId];
+        
+        // If not found, try to find it by searching through all keys
+        if (!targetKey) {
+          console.log('Key not found with standard format, searching...');
+          const foundKeyEntry = Object.entries(storedKeys).find(([keyId, keyData]) => {
+            return keyData.user_id === user_id && keyData.service === service;
+          });
+          
+          if (foundKeyEntry) {
+            console.log('Found key with different format:', foundKeyEntry[0]);
+            targetKey = foundKeyEntry[1];
+            // Update the stored keys to use the correct format
+            delete storedKeys[foundKeyEntry[0]];
+            storedKeys[defaultKeyId] = targetKey;
+          }
+        }
+        
+        if (!targetKey) {
+          console.log('Key not found! Available keys:', storedKeys);
+          return res.status(404).json({ 
+            error: 'API key not found',
+            debug: {
+              looking_for: defaultKeyId,
+              available_keys: Object.keys(storedKeys),
+              stored_keys_data: storedKeys,
+              user_id,
+              service
+            }
+          });
         }
 
         // Remove default from all other services for this user
@@ -231,15 +265,20 @@ export default async function handler(req, res) {
         });
 
         // Set this service as default
-        storedKeys[defaultKeyId].is_default = true;
-        storedKeys[defaultKeyId].updated_at = new Date().toISOString();
+        targetKey.is_default = true;
+        targetKey.updated_at = new Date().toISOString();
+        
+        // Ensure the key is stored with the correct ID
+        storedKeys[defaultKeyId] = targetKey;
 
         saveStoredKeys(storedKeys);
+
+        console.log('Successfully set default service:', service);
 
         return res.status(200).json({
           success: true,
           message: `${AI_SERVICES[service].name} set as default AI service`,
-          data: storedKeys[defaultKeyId]
+          data: targetKey
         });
 
       case 'test_api_key':

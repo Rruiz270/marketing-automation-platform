@@ -495,6 +495,9 @@ export default function ApiConnectionManager({ userId = 'demo_user', globalApiKe
   const setDefaultService = async (serviceId) => {
     try {
       setLoading(true);
+      console.log('Setting default service:', { serviceId, userId });
+      console.log('Current AI keys:', aiKeys);
+      
       const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -506,6 +509,8 @@ export default function ApiConnectionManager({ userId = 'demo_user', globalApiKe
       });
       
       const data = await response.json();
+      console.log('Set default service response:', data);
+      
       if (data.success) {
         // Update local state immediately for better UX
         setAiKeys(prevKeys => 
@@ -521,7 +526,8 @@ export default function ApiConnectionManager({ userId = 'demo_user', globalApiKe
           onApiKeysUpdated();
         }
       } else {
-        alert('Error setting default service: ' + data.error);
+        console.error('Error setting default service:', data);
+        alert('Error setting default service: ' + data.error + (data.debug ? '\nDebug: ' + JSON.stringify(data.debug, null, 2) : ''));
       }
     } catch (error) {
       console.error('Error setting default AI service:', error);
