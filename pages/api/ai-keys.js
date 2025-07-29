@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import CryptoJS from 'crypto-js';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'fallback-encryption-key-32-chars!!';
 
 // AI API Keys Schema
 const aiApiKeysSchema = new mongoose.Schema({
@@ -17,8 +17,12 @@ const aiApiKeysSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Create index for efficient queries
-aiApiKeysSchema.index({ user_id: 1, service: 1 }, { unique: true });
+// Create index for efficient queries (but not on first creation to avoid errors)
+try {
+  aiApiKeysSchema.index({ user_id: 1, service: 1 }, { unique: true });
+} catch (indexError) {
+  console.log('Index creation skipped:', indexError.message);
+}
 
 const AiApiKeys = mongoose.models.AiApiKeys || mongoose.model('AiApiKeys', aiApiKeysSchema, 'ai_api_keys');
 
@@ -176,6 +180,13 @@ export default async function handler(req, res) {
     console.log('AI Keys API called with:', { action, user_id, service, api_key: api_key ? 'provided' : 'missing' });
 
     switch (action) {
+      case 'test':
+        return res.status(200).json({
+          success: true,
+          message: 'API endpoint is working',
+          timestamp: new Date().toISOString()
+        });
+
       case 'get_ai_services':
         return res.status(200).json({
           success: true,
@@ -287,9 +298,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('AI Keys API Error:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : 'Check server logs'
     });
   }
 }
