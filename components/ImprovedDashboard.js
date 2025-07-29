@@ -12,6 +12,7 @@ export default function ImprovedDashboard() {
     firstCampaignCreated: false,
     optimizationStarted: false
   });
+  const [globalApiKeys, setGlobalApiKeys] = useState([]);
 
   // Check user progress
   useEffect(() => {
@@ -38,13 +39,23 @@ export default function ImprovedDashboard() {
       });
       const data = await response.json();
       
-      setUserProgress(prev => ({
-        ...prev,
-        apiKeysConnected: data.success && data.data.some(key => key.status === 'active' && key.enabled !== false)
-      }));
+      if (data.success) {
+        // Update global API keys state
+        setGlobalApiKeys(data.data);
+        
+        setUserProgress(prev => ({
+          ...prev,
+          apiKeysConnected: data.data.some(key => key.status === 'active' && key.enabled !== false)
+        }));
+      }
     } catch (error) {
       console.error('Error checking progress:', error);
     }
+  };
+
+  // Callback function for child components to refresh API state
+  const onApiKeysUpdated = () => {
+    checkUserProgress();
   };
 
   const sections = [
@@ -487,27 +498,49 @@ export default function ImprovedDashboard() {
 
           {/* Campaign Builder */}
           {activeSection === 'campaign-builder' && (
-            <AdvancedCampaignBuilder userId="demo_user" />
+            <AdvancedCampaignBuilder 
+              userId="demo_user" 
+              globalApiKeys={globalApiKeys}
+              onApiKeysUpdated={onApiKeysUpdated}
+            />
           )}
 
           {/* Performance Monitor */}
           {activeSection === 'performance-monitor' && (
-            <IntelligentPerformanceMonitor campaignId="demo_campaign" userId="demo_user" />
+            <IntelligentPerformanceMonitor 
+              campaignId="demo_campaign" 
+              userId="demo_user"
+              globalApiKeys={globalApiKeys}
+              onApiKeysUpdated={onApiKeysUpdated}
+            />
           )}
 
           {/* AI Suite */}
           {activeSection === 'ai-suite' && (
-            <AutonomousAiDashboard userId="demo_user" />
+            <AutonomousAiDashboard 
+              userId="demo_user"
+              globalApiKeys={globalApiKeys}
+              onApiKeysUpdated={onApiKeysUpdated}
+            />
           )}
 
           {/* Optimization */}
           {activeSection === 'optimization' && (
-            <RealTimeOptimization campaignId="demo_campaign" userId="demo_user" />
+            <RealTimeOptimization 
+              campaignId="demo_campaign" 
+              userId="demo_user"
+              globalApiKeys={globalApiKeys}
+              onApiKeysUpdated={onApiKeysUpdated}
+            />
           )}
 
           {/* API Connections */}
           {activeSection === 'api-connections' && (
-            <ApiConnectionManager userId="demo_user" />
+            <ApiConnectionManager 
+              userId="demo_user"
+              globalApiKeys={globalApiKeys}
+              onApiKeysUpdated={onApiKeysUpdated}
+            />
           )}
         </div>
       </div>

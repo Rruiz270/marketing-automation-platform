@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function ApiConnectionManager({ userId = 'demo_user' }) {
+export default function ApiConnectionManager({ userId = 'demo_user', globalApiKeys = [], onApiKeysUpdated }) {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
@@ -40,8 +40,21 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
     loadConnections();
     loadSyncStatus();
     loadAiServices(); // Load AI services immediately
-    loadAiKeys();
+    
+    // Use global API keys if available, otherwise load them
+    if (globalApiKeys && globalApiKeys.length > 0) {
+      setAiKeys(globalApiKeys);
+    } else {
+      loadAiKeys();
+    }
   }, []);
+
+  // Update local state when global API keys change
+  useEffect(() => {
+    if (globalApiKeys && globalApiKeys.length > 0) {
+      setAiKeys(globalApiKeys);
+    }
+  }, [globalApiKeys]);
 
   // Also load AI services when component mounts or when activeSection changes to 'ai'
   useEffect(() => {
@@ -136,6 +149,10 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
       const data = await response.json();
       if (data.success) {
         setAiKeys(data.data);
+        // Notify parent component of the update
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
       }
     } catch (error) {
       console.error('Error loading AI keys:', error);
@@ -339,6 +356,10 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         alert(data.message);
         closeAiServiceForm();
         loadAiKeys();
+        // Notify parent component
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
       } else {
         alert('Error: ' + (data.error || 'Unknown error'));
       }
@@ -399,6 +420,10 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         );
         // Also reload to ensure consistency
         loadAiKeys();
+        // Notify parent component
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
       } else {
         alert('Error toggling service: ' + data.error);
       }
@@ -436,6 +461,10 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         alert(`${serviceName} disconnected successfully!`);
         // Also reload to ensure consistency
         loadAiKeys();
+        // Notify parent component
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
       } else {
         alert('Error disconnecting service: ' + data.error);
       }

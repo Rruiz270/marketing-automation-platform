@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function AdvancedCampaignBuilder({ userId = 'demo_user' }) {
+export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalApiKeys = [], onApiKeysUpdated }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [campaignData, setCampaignData] = useState({
     objective: '',
@@ -66,27 +66,39 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user' }) {
     }
   ];
 
-  // Load AI connections on mount and when component becomes active
+  // Use global API keys if available, otherwise load them
   useEffect(() => {
-    loadAiConnections();
-  }, []);
+    if (globalApiKeys && globalApiKeys.length > 0) {
+      setAiConnections(globalApiKeys);
+    } else {
+      loadAiConnections();
+    }
+  }, [globalApiKeys]);
 
   // Refresh connections when component becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadAiConnections();
+      if (!document.hidden && onApiKeysUpdated) {
+        onApiKeysUpdated();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', loadAiConnections);
+    window.addEventListener('focus', () => {
+      if (onApiKeysUpdated) {
+        onApiKeysUpdated();
+      }
+    });
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', loadAiConnections);
+      window.removeEventListener('focus', () => {
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
+      });
     };
-  }, []);
+  }, [onApiKeysUpdated]);
 
   const loadAiConnections = async () => {
     try {
@@ -102,6 +114,10 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user' }) {
       const data = await response.json();
       if (data.success) {
         setAiConnections(data.data);
+        // Notify parent component about the update
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
       }
     } catch (error) {
       console.error('Error loading AI connections:', error);
