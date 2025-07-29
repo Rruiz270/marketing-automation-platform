@@ -23,8 +23,13 @@ export default function handler(req, res) {
       apiEndpoints: 33,
       deployment: 'vercel-production'
     },
-    lastUpdated: '2024-07-29',
-    buildStatus: 'success'
+    lastUpdated: '2024-07-29T17:50:00',
+    buildStatus: 'success',
+    deploymentForced: true,
+    newComponents: {
+      companyRegistration: 'CompanyRegistration.js',
+      campaignBuilder: 'ProfessionalCampaignBuilder.js'
+    }
   };
 
   res.status(200).json(deploymentInfo);
