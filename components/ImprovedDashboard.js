@@ -4,10 +4,13 @@ import AdvancedCampaignBuilder from './AdvancedCampaignBuilder';
 import AutonomousAiDashboard from './AutonomousAiDashboard';
 import ApiConnectionManager from './ApiConnectionManager';
 import IntelligentPerformanceMonitor from './IntelligentPerformanceMonitor';
+import CompanyRegistration from './CompanyRegistration';
+import ProfessionalCampaignBuilder from './ProfessionalCampaignBuilder';
 
 export default function ImprovedDashboard() {
   const [activeSection, setActiveSection] = useState('getting-started');
   const [userProgress, setUserProgress] = useState({
+    companyRegistered: false,
     apiKeysConnected: false,
     firstCampaignCreated: false,
     optimizationStarted: false
@@ -67,6 +70,24 @@ export default function ImprovedDashboard() {
     try {
       console.log('ImprovedDashboard: Checking user progress, force:', force);
       console.log('ImprovedDashboard: Current globalApiKeys:', globalApiKeys.length);
+      
+      // Check company profile
+      const profileResponse = await fetch('/api/company-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get',
+          user_id: 'demo_user'
+        })
+      });
+      const profileData = await profileResponse.json();
+      
+      if (profileData.success && profileData.data) {
+        setUserProgress(prev => ({
+          ...prev,
+          companyRegistered: true
+        }));
+      }
       
       // If we already have API keys and this isn't a forced update, use existing state
       if (globalApiKeys.length > 0 && !force) {
@@ -150,10 +171,17 @@ export default function ImprovedDashboard() {
       color: '#3b82f6'
     },
     { 
+      id: 'company-registration', 
+      title: 'Company Profile', 
+      icon: '🏢',
+      description: 'Business information & insights',
+      color: '#f59e0b'
+    },
+    { 
       id: 'campaign-builder', 
       title: 'Campaign Builder', 
       icon: '🎯',
-      description: 'Step-by-step AI campaign creation',
+      description: '7-step AI campaign creation',
       color: '#10b981'
     },
     { 
@@ -358,6 +386,64 @@ export default function ImprovedDashboard() {
               </div>
 
               <div style={{ display: 'grid', gap: '24px', maxWidth: '800px', margin: '0 auto' }}>
+                {/* Step 0 - Company Registration */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '20px',
+                  padding: '24px',
+                  backgroundColor: userProgress.companyRegistered ? '#dcfce7' : '#fef3c7',
+                  borderRadius: '16px',
+                  border: `2px solid ${userProgress.companyRegistered ? '#22c55e' : '#f59e0b'}`
+                }}>
+                  <div style={{ 
+                    width: '48px', 
+                    height: '48px',
+                    backgroundColor: userProgress.companyRegistered ? '#22c55e' : '#f59e0b',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    fontWeight: 'bold',
+                    color: 'white'
+                  }}>
+                    {userProgress.companyRegistered ? '✓' : '1'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ 
+                      fontSize: '18px', 
+                      fontWeight: '600', 
+                      color: '#1e293b',
+                      margin: '0 0 8px 0'
+                    }}>
+                      Register Your Company
+                    </h3>
+                    <p style={{ 
+                      fontSize: '14px', 
+                      color: '#64748b',
+                      margin: '0 0 16px 0'
+                    }}>
+                      Provide essential business information for personalized AI strategies.
+                    </p>
+                    <button
+                      onClick={() => setActiveSection('company-registration')}
+                      style={{
+                        padding: '12px 24px',
+                        backgroundColor: userProgress.companyRegistered ? '#22c55e' : '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {userProgress.companyRegistered ? '✅ Registered' : '📝 Register Now'}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Step 1 */}
                 <div style={{ 
                   display: 'flex', 
@@ -366,7 +452,8 @@ export default function ImprovedDashboard() {
                   padding: '24px',
                   backgroundColor: userProgress.apiKeysConnected ? '#dcfce7' : '#f8fafc',
                   borderRadius: '16px',
-                  border: `2px solid ${userProgress.apiKeysConnected ? '#22c55e' : '#e2e8f0'}`
+                  border: `2px solid ${userProgress.apiKeysConnected ? '#22c55e' : '#e2e8f0'}`,
+                  opacity: userProgress.companyRegistered ? 1 : 0.6
                 }}>
                   <div style={{ 
                     width: '48px', 
@@ -380,7 +467,7 @@ export default function ImprovedDashboard() {
                     fontWeight: 'bold',
                     color: 'white'
                   }}>
-                    {userProgress.apiKeysConnected ? '✓' : '1'}
+                    {userProgress.apiKeysConnected ? '✓' : '2'}
                   </div>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ 
@@ -400,15 +487,16 @@ export default function ImprovedDashboard() {
                     </p>
                     <button
                       onClick={() => setActiveSection('api-connections')}
+                      disabled={!userProgress.companyRegistered}
                       style={{
                         padding: '12px 24px',
-                        backgroundColor: userProgress.apiKeysConnected ? '#22c55e' : '#3b82f6',
+                        backgroundColor: userProgress.apiKeysConnected ? '#22c55e' : userProgress.companyRegistered ? '#3b82f6' : '#94a3b8',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '14px',
                         fontWeight: '600',
-                        cursor: 'pointer'
+                        cursor: userProgress.companyRegistered ? 'pointer' : 'not-allowed'
                       }}
                     >
                       {userProgress.apiKeysConnected ? '✅ Connected' : '🔗 Connect Now'}
@@ -425,7 +513,7 @@ export default function ImprovedDashboard() {
                   backgroundColor: '#f8fafc',
                   borderRadius: '16px',
                   border: '2px solid #e2e8f0',
-                  opacity: userProgress.apiKeysConnected ? 1 : 0.6
+                  opacity: userProgress.apiKeysConnected && userProgress.companyRegistered ? 1 : 0.6
                 }}>
                   <div style={{ 
                     width: '48px', 
@@ -439,7 +527,7 @@ export default function ImprovedDashboard() {
                     fontWeight: 'bold',
                     color: 'white'
                   }}>
-                    2
+                    3
                   </div>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ 
@@ -459,16 +547,16 @@ export default function ImprovedDashboard() {
                     </p>
                     <button
                       onClick={() => setActiveSection('campaign-builder')}
-                      disabled={!userProgress.apiKeysConnected}
+                      disabled={!userProgress.apiKeysConnected || !userProgress.companyRegistered}
                       style={{
                         padding: '12px 24px',
-                        backgroundColor: userProgress.apiKeysConnected ? '#10b981' : '#94a3b8',
+                        backgroundColor: userProgress.apiKeysConnected && userProgress.companyRegistered ? '#10b981' : '#94a3b8',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
                         fontSize: '14px',
                         fontWeight: '600',
-                        cursor: userProgress.apiKeysConnected ? 'pointer' : 'not-allowed'
+                        cursor: userProgress.apiKeysConnected && userProgress.companyRegistered ? 'pointer' : 'not-allowed'
                       }}
                     >
                       🎯 Build Campaign
@@ -485,7 +573,7 @@ export default function ImprovedDashboard() {
                   backgroundColor: '#f8fafc',
                   borderRadius: '16px',
                   border: '2px solid #e2e8f0',
-                  opacity: userProgress.apiKeysConnected ? 1 : 0.6
+                  opacity: userProgress.apiKeysConnected && userProgress.companyRegistered ? 1 : 0.6
                 }}>
                   <div style={{ 
                     width: '48px', 
@@ -499,7 +587,7 @@ export default function ImprovedDashboard() {
                     fontWeight: 'bold',
                     color: 'white'
                   }}>
-                    3
+                    4
                   </div>
                   <div style={{ flex: 1 }}>
                     <h3 style={{ 
@@ -579,9 +667,20 @@ export default function ImprovedDashboard() {
             </div>
           )}
 
+          {/* Company Registration */}
+          {activeSection === 'company-registration' && (
+            <CompanyRegistration 
+              userId="demo_user" 
+              onComplete={() => {
+                checkUserProgress(true);
+                setActiveSection('getting-started');
+              }}
+            />
+          )}
+
           {/* Campaign Builder */}
           {activeSection === 'campaign-builder' && (
-            <AdvancedCampaignBuilder 
+            <ProfessionalCampaignBuilder 
               userId="demo_user" 
               globalApiKeys={globalApiKeys}
               onApiKeysUpdated={onApiKeysUpdated}
