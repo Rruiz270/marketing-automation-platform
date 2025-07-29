@@ -96,7 +96,7 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
 
   const loadAiServices = async () => {
     try {
-      const response = await fetch('/api/ai-keys', {
+      const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +124,7 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
 
   const loadAiKeys = async () => {
     try {
-      const response = await fetch('/api/ai-keys', {
+      const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -320,7 +320,7 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
       setLoading(true);
       console.log('Saving API key for service:', serviceId);
       
-      const response = await fetch('/api/ai-keys', {
+      const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -353,7 +353,7 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
   const testAiApiKey = async (serviceId) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/ai-keys', {
+      const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
