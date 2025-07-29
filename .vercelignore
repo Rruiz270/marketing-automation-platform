@@ -1,0 +1,8 @@
+# Vercel ignore file
+.env.local
+.env.example
+.DS_Store
+*.log
+README.md
+DEPLOYMENT_*.md
+FORCE_*.txt
