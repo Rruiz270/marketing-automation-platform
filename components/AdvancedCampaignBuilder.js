@@ -66,9 +66,26 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user' }) {
     }
   ];
 
-  // Load AI connections on mount
+  // Load AI connections on mount and when component becomes active
   useEffect(() => {
     loadAiConnections();
+  }, []);
+
+  // Refresh connections when component becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadAiConnections();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', loadAiConnections);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', loadAiConnections);
+    };
   }, []);
 
   const loadAiConnections = async () => {
@@ -100,7 +117,7 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user' }) {
   };
 
   const getConnectedAiServices = () => {
-    return aiConnections.filter(conn => conn.status === 'active');
+    return aiConnections.filter(conn => conn.status === 'active' && conn.enabled !== false);
   };
 
   const checkAiCapabilities = () => {

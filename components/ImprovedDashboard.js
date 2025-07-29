@@ -18,6 +18,13 @@ export default function ImprovedDashboard() {
     checkUserProgress();
   }, []);
 
+  // Refresh progress when active section changes to ensure fresh data
+  useEffect(() => {
+    if (activeSection === 'campaign-builder' || activeSection === 'performance-monitor' || activeSection === 'ai-suite') {
+      checkUserProgress();
+    }
+  }, [activeSection]);
+
   const checkUserProgress = async () => {
     try {
       // Check if AI keys are connected
@@ -33,7 +40,7 @@ export default function ImprovedDashboard() {
       
       setUserProgress(prev => ({
         ...prev,
-        apiKeysConnected: data.success && data.data.length > 0
+        apiKeysConnected: data.success && data.data.some(key => key.status === 'active' && key.enabled !== false)
       }));
     } catch (error) {
       console.error('Error checking progress:', error);

@@ -37,31 +37,46 @@ const AI_SERVICES = {
   }
 };
 
-// Persistent storage simulation using file system for serverless
+// In-memory storage with persistence simulation for serverless
+// Since /tmp is ephemeral in serverless, we'll use a combination approach
+let memoryStorage = {};
+
+// For demo purposes, we'll also try to persist to temp file when possible
 const fs = require('fs');
 const path = require('path');
-
 const STORAGE_FILE = path.join('/tmp', 'ai-keys-storage.json');
 
-// Load stored keys from file
+// Load stored keys with fallback
 function loadStoredKeys() {
   try {
+    // First try to load from file if it exists
     if (fs.existsSync(STORAGE_FILE)) {
       const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-      return JSON.parse(data);
+      const fileData = JSON.parse(data);
+      // Merge with memory storage
+      memoryStorage = { ...memoryStorage, ...fileData };
+      console.log('Loaded from file and merged with memory storage');
+    } else {
+      console.log('No file storage found, using memory storage only');
     }
   } catch (error) {
-    console.error('Error loading stored keys:', error);
+    console.error('Error loading from file storage:', error);
   }
-  return {};
+  
+  return memoryStorage;
 }
 
-// Save keys to file
+// Save keys with dual storage
 function saveStoredKeys(keys) {
+  // Always save to memory
+  memoryStorage = keys;
+  
   try {
+    // Try to save to file as backup
     fs.writeFileSync(STORAGE_FILE, JSON.stringify(keys, null, 2));
+    console.log('Saved to both memory and file storage');
   } catch (error) {
-    console.error('Error saving stored keys:', error);
+    console.error('Error saving to file storage, using memory only:', error);
   }
 }
 
@@ -76,6 +91,7 @@ export default async function handler(req, res) {
     
     // Load existing keys from persistent storage
     let storedKeys = loadStoredKeys();
+    console.log('Loaded stored keys:', Object.keys(storedKeys).length, 'keys found');
 
     switch (action) {
       case 'test':
@@ -149,6 +165,8 @@ export default async function handler(req, res) {
 
       case 'get_user_keys':
         const userKeys = Object.values(storedKeys).filter(key => key.user_id === user_id);
+        console.log('Returning user keys for', user_id, ':', userKeys.length, 'keys found');
+        console.log('User keys:', userKeys.map(k => ({ service: k.service, status: k.status, enabled: k.enabled })));
         return res.status(200).json({
           success: true,
           data: userKeys
