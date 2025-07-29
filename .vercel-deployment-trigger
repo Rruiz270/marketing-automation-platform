@@ -1,4 +1,4 @@
-DEPLOYMENT_TIMESTAMP=2024-07-29
-CAMPAIGN_BUILDER_VERSION=7-step-complete
-FEATURES=company-registration,ai-campaign-builder,performance-analyzer
-STATUS=production-ready
+DEPLOYMENT_TIMESTAMP=2024-07-29T14:30:00
+CAMPAIGN_BUILDER_VERSION=7-step-complete-v2
+FEATURES=company-registration,ai-campaign-builder,performance-analyzer,api-persistence
+STATUS=production-ready-force-deploy
