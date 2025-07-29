@@ -363,14 +363,26 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user' }) {
                       display: 'flex',
                       alignItems: 'center',
                       padding: '8px 16px',
-                      backgroundColor: '#10b981',
+                      backgroundColor: ai.enabled !== false ? '#10b981' : '#d1d5db',
                       borderRadius: '20px',
                       color: 'white',
                       fontSize: '14px',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      position: 'relative'
                     }}>
-                      <span style={{ marginRight: '6px' }}>✓</span>
-                      {ai.service.toUpperCase()}
+                      <span style={{ marginRight: '6px' }}>
+                        {ai.enabled !== false ? '✓' : '⏸️'}
+                      </span>
+                      {ai.service_name || ai.service.toUpperCase()}
+                      {ai.enabled === false && (
+                        <span style={{ 
+                          fontSize: '10px', 
+                          marginLeft: '4px',
+                          opacity: '0.8'
+                        }}>
+                          (Disabled)
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

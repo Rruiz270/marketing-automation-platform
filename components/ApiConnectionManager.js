@@ -374,13 +374,88 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
     }
   };
 
+  const toggleAiService = async (serviceId) => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/ai-keys-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_api_key',
+          user_id: userId,
+          service: serviceId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        // Update local state immediately for better UX
+        setAiKeys(prevKeys => 
+          prevKeys.map(key => 
+            key.service === serviceId 
+              ? { ...key, enabled: data.data.enabled, status: data.data.status }
+              : key
+          )
+        );
+        // Also reload to ensure consistency
+        loadAiKeys();
+      } else {
+        alert('Error toggling service: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error toggling AI service:', error);
+      alert('Error toggling service: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const disconnectAiService = async (serviceId) => {
+    const serviceName = Object.values(aiServices).flat().find(s => s.id === serviceId)?.name || serviceId;
+    
+    if (!confirm(`Are you sure you want to disconnect ${serviceName}? This will remove the API key and disable all AI features for this service.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/ai-keys-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'disconnect_api_key',
+          user_id: userId,
+          service: serviceId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        // Update local state immediately
+        setAiKeys(prevKeys => prevKeys.filter(key => key.service !== serviceId));
+        alert(`${serviceName} disconnected successfully!`);
+        // Also reload to ensure consistency
+        loadAiKeys();
+      } else {
+        alert('Error disconnecting service: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error disconnecting AI service:', error);
+      alert('Error disconnecting service: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const isAiServiceConnected = (serviceId) => {
-    return aiKeys.some(key => key.service === serviceId && key.status === 'active');
+    return aiKeys.some(key => key.service === serviceId && key.enabled !== false);
   };
 
   const getAiServiceStatus = (serviceId) => {
     const key = aiKeys.find(key => key.service === serviceId);
-    return key ? key.status : 'not_configured';
+    if (!key) return 'not_configured';
+    if (key.enabled === false) return 'disabled';
+    return key.status || 'active';
   };
 
   const availablePlatforms = [
@@ -1381,77 +1456,130 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              {!isConnected ? (
-                                <button
-                                  onClick={() => openAiServiceForm(service.id)}
-                                  style={{
-                                    backgroundColor: '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
-                                    flex: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.target.style.backgroundColor = '#2563eb';
-                                    e.target.style.transform = 'translateY(-1px)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.target.style.backgroundColor = '#3b82f6';
-                                    e.target.style.transform = 'none';
-                                  }}
-                                >
-                                  <span>🔑</span>
-                                  <span>Add API Key</span>
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => testAiApiKey(service.id)}
-                                  disabled={loading}
-                                  style={{
-                                    backgroundColor: 'white',
-                                    color: '#64748b',
-                                    border: '2px solid #e2e8f0',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    flex: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    if (!loading) {
-                                      e.target.style.borderColor = '#cbd5e1';
-                                      e.target.style.color = '#475569';
-                                    }
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    if (!loading) {
-                                      e.target.style.borderColor = '#e2e8f0';
-                                      e.target.style.color = '#64748b';
-                                    }
-                                  }}
-                                >
-                                  <span>🔍</span>
-                                  <span>Test Connection</span>
-                                </button>
-                              )}
-                            </div>
+                            {!isConnected ? (
+                              <button
+                                onClick={() => openAiServiceForm(service.id)}
+                                style={{
+                                  backgroundColor: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '12px 20px',
+                                  borderRadius: '8px',
+                                  fontSize: '14px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '8px'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.backgroundColor = '#2563eb';
+                                  e.target.style.transform = 'translateY(-1px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.backgroundColor = '#3b82f6';
+                                  e.target.style.transform = 'none';
+                                }}
+                              >
+                                <span>🔑</span>
+                                <span>Connect {service.name}</span>
+                              </button>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {/* Connection Controls */}
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '12px 16px',
+                                  backgroundColor: '#f0fdf4',
+                                  borderRadius: '8px',
+                                  border: '1px solid #bbf7d0'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '16px' }}>🔗</span>
+                                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#065f46' }}>
+                                      Connected
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Toggle Switch */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '12px', color: '#047857' }}>
+                                      {getAiServiceStatus(service.id) === 'active' ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                    <div
+                                      onClick={() => toggleAiService(service.id)}
+                                      style={{
+                                        width: '44px',
+                                        height: '24px',
+                                        borderRadius: '12px',
+                                        backgroundColor: getAiServiceStatus(service.id) === 'active' ? '#10b981' : '#d1d5db',
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        transition: 'all 0.2s ease'
+                                      }}
+                                    >
+                                      <div style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        backgroundColor: 'white',
+                                        position: 'absolute',
+                                        top: '2px',
+                                        left: getAiServiceStatus(service.id) === 'active' ? '22px' : '2px',
+                                        transition: 'all 0.2s ease',
+                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                                      }} />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button
+                                    onClick={() => testAiApiKey(service.id)}
+                                    disabled={loading}
+                                    style={{
+                                      backgroundColor: 'white',
+                                      color: '#64748b',
+                                      border: '2px solid #e2e8f0',
+                                      padding: '8px 12px',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      fontWeight: '500',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      flex: 1
+                                    }}
+                                  >
+                                    🔍 Test
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => disconnectAiService(service.id)}
+                                    disabled={loading}
+                                    style={{
+                                      backgroundColor: '#fef2f2',
+                                      color: '#dc2626',
+                                      border: '2px solid #fecaca',
+                                      padding: '8px 12px',
+                                      borderRadius: '6px',
+                                      fontSize: '12px',
+                                      fontWeight: '500',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      flex: 1
+                                    }}
+                                  >
+                                    🗑️ Remove
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                             
                             <a
                               href={service.website}
