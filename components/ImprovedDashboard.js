@@ -14,17 +14,29 @@ export default function ImprovedDashboard() {
   });
   const [globalApiKeys, setGlobalApiKeys] = useState([]);
 
-  // Check user progress
+  // Check user progress on initial load
   useEffect(() => {
-    checkUserProgress();
+    checkUserProgress(true); // Force initial load
   }, []);
 
   // Refresh progress when active section changes to ensure fresh data
   useEffect(() => {
     if (activeSection === 'campaign-builder' || activeSection === 'performance-monitor' || activeSection === 'ai-suite') {
       checkUserProgress();
+    } else if (activeSection === 'getting-started') {
+      // For getting started, only check if we don't have any keys yet
+      if (globalApiKeys.length === 0) {
+        checkUserProgress();
+      } else {
+        // Use existing state for better persistence
+        const hasActiveKeys = globalApiKeys.some(key => key.status === 'active' && key.enabled !== false);
+        setUserProgress(prev => ({
+          ...prev,
+          apiKeysConnected: hasActiveKeys
+        }));
+      }
     }
-  }, [activeSection]);
+  }, [activeSection, globalApiKeys]);
 
   // Listen for navigation events from child components
   useEffect(() => {
@@ -38,8 +50,35 @@ export default function ImprovedDashboard() {
     return () => window.removeEventListener('navigate-to-api', handleNavigation);
   }, []);
 
-  const checkUserProgress = async () => {
+  // Monitor globalApiKeys changes and update user progress accordingly
+  useEffect(() => {
+    console.log('ImprovedDashboard: globalApiKeys changed:', globalApiKeys.length);
+    if (globalApiKeys.length >= 0) {
+      const hasActiveKeys = globalApiKeys.some(key => key.status === 'active' && key.enabled !== false);
+      console.log('ImprovedDashboard: Updating apiKeysConnected to:', hasActiveKeys);
+      setUserProgress(prev => ({
+        ...prev,
+        apiKeysConnected: hasActiveKeys
+      }));
+    }
+  }, [globalApiKeys]);
+
+  const checkUserProgress = async (force = false) => {
     try {
+      console.log('ImprovedDashboard: Checking user progress, force:', force);
+      console.log('ImprovedDashboard: Current globalApiKeys:', globalApiKeys.length);
+      
+      // If we already have API keys and this isn't a forced update, use existing state
+      if (globalApiKeys.length > 0 && !force) {
+        console.log('ImprovedDashboard: Using existing globalApiKeys state');
+        const hasActiveKeys = globalApiKeys.some(key => key.status === 'active' && key.enabled !== false);
+        setUserProgress(prev => ({
+          ...prev,
+          apiKeysConnected: hasActiveKeys
+        }));
+        return;
+      }
+      
       // Check if AI keys are connected
       const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
@@ -51,23 +90,55 @@ export default function ImprovedDashboard() {
       });
       const data = await response.json();
       
-      if (data.success) {
-        // Update global API keys state
-        setGlobalApiKeys(data.data);
+      console.log('ImprovedDashboard: API response:', data);
+      
+      if (data.success && data.data) {
+        console.log('ImprovedDashboard: Updating globalApiKeys with', data.data.length, 'keys');
         
-        setUserProgress(prev => ({
-          ...prev,
-          apiKeysConnected: data.data.some(key => key.status === 'active' && key.enabled !== false)
-        }));
+        // Only update if we got meaningful data or if this is a forced update
+        if (data.data.length > 0 || force || globalApiKeys.length === 0) {
+          setGlobalApiKeys(data.data);
+          
+          const hasActiveKeys = data.data.some(key => key.status === 'active' && key.enabled !== false);
+          console.log('ImprovedDashboard: Has active keys:', hasActiveKeys);
+          
+          setUserProgress(prev => ({
+            ...prev,
+            apiKeysConnected: hasActiveKeys
+          }));
+        } else {
+          console.log('ImprovedDashboard: Preserving existing globalApiKeys state');
+        }
+      } else {
+        console.error('ImprovedDashboard: API response not successful:', data);
+        // Don't clear existing state on error
+        if (globalApiKeys.length > 0) {
+          console.log('ImprovedDashboard: Preserving existing state due to API error');
+          const hasActiveKeys = globalApiKeys.some(key => key.status === 'active' && key.enabled !== false);
+          setUserProgress(prev => ({
+            ...prev,
+            apiKeysConnected: hasActiveKeys
+          }));
+        }
       }
     } catch (error) {
-      console.error('Error checking progress:', error);
+      console.error('ImprovedDashboard: Error checking progress:', error);
+      // Don't clear existing state on error
+      if (globalApiKeys.length > 0) {
+        console.log('ImprovedDashboard: Preserving existing state due to network error');
+        const hasActiveKeys = globalApiKeys.some(key => key.status === 'active' && key.enabled !== false);
+        setUserProgress(prev => ({
+          ...prev,
+          apiKeysConnected: hasActiveKeys
+        }));
+      }
     }
   };
 
   // Callback function for child components to refresh API state
   const onApiKeysUpdated = () => {
-    checkUserProgress();
+    console.log('ImprovedDashboard: onApiKeysUpdated called');
+    checkUserProgress(true);
   };
 
   const sections = [
