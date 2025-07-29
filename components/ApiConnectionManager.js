@@ -611,113 +611,308 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
   const connectedPlatformIds = connections.map(c => c.platform);
 
   return (
-    <div style={{ padding: '24px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>API Connections</h2>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={syncAllPlatforms}
-            disabled={loading || connections.length === 0}
-            style={{
-              backgroundColor: '#10b981',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '14px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading || connections.length === 0 ? 0.5 : 1
-            }}
-          >
-            {loading ? 'Syncing...' : 'Sync All'}
-          </button>
+    <div style={{ 
+      backgroundColor: 'white', 
+      borderRadius: '16px', 
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      border: '1px solid #e2e8f0',
+      overflow: 'hidden'
+    }}>
+      {/* Header Section */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '32px',
+        color: 'white'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ 
+            width: '48px', 
+            height: '48px', 
+            backgroundColor: 'rgba(255,255,255,0.2)', 
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px',
+            marginRight: '16px'
+          }}>
+            🔗
+          </div>
+          <div>
+            <h1 style={{ 
+              fontSize: '28px', 
+              fontWeight: '700', 
+              margin: 0,
+              lineHeight: '1.2'
+            }}>
+              API Connections
+            </h1>
+            <p style={{ 
+              fontSize: '16px', 
+              margin: 0,
+              opacity: '0.9',
+              fontWeight: '400'
+            }}>
+              Connect your advertising platforms and AI services to power your campaigns
+            </p>
+          </div>
         </div>
-      </div>
-
-      {/* Section Tabs */}
-      <div style={{ borderBottom: '1px solid #e5e7eb', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '0' }}>
-          <button
-            onClick={() => setActiveSection('advertising')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              borderBottom: activeSection === 'advertising' ? '2px solid #3b82f6' : '2px solid transparent',
-              color: activeSection === 'advertising' ? '#3b82f6' : '#6b7280',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            🎯 Advertising Platforms
-          </button>
-          <button
-            onClick={() => {
-              setActiveSection('ai');
-              if (Object.keys(aiServices).length === 0) {
-                loadAiServices();
-              }
-            }}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              borderBottom: activeSection === 'ai' ? '2px solid #3b82f6' : '2px solid transparent',
-              color: activeSection === 'ai' ? '#3b82f6' : '#6b7280',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            🤖 AI Creative Services
-          </button>
-        </div>
-      </div>
-
-      {/* Connection Status Overview */}
-      {syncStatus && (
+        
+        {/* Quick Stats */}
         <div style={{ 
-          backgroundColor: '#f0fdf4', 
-          border: '1px solid #bbf7d0', 
-          borderRadius: '8px', 
-          padding: '16px', 
-          marginBottom: '24px' 
+          display: 'flex', 
+          gap: '24px', 
+          marginTop: '24px',
+          flexWrap: 'wrap'
         }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 8px 0' }}>Sync Status</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-            <div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#059669' }}>
-                {syncStatus.connected_platforms}
-              </div>
-              <div style={{ fontSize: '12px', color: '#065f46' }}>Connected Platforms</div>
+          <div style={{ 
+            backgroundColor: 'rgba(255,255,255,0.15)', 
+            borderRadius: '12px',
+            padding: '16px 20px',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ fontSize: '24px', fontWeight: '700' }}>
+              {connections.length}
             </div>
-            <div>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#059669' }}>
-                {syncStatus.total_campaigns}
-              </div>
-              <div style={{ fontSize: '12px', color: '#065f46' }}>Total Campaigns</div>
+            <div style={{ fontSize: '14px', opacity: '0.9' }}>
+              Connected Platforms
             </div>
-            <div>
-              <div style={{ fontSize: '12px', color: '#065f46' }}>Last Global Sync</div>
-              <div style={{ fontSize: '14px', fontWeight: '500' }}>
-                {syncStatus.last_global_sync ? 
-                  new Date(syncStatus.last_global_sync).toLocaleString() : 
-                  'Never'
-                }
-              </div>
+          </div>
+          
+          <div style={{ 
+            backgroundColor: 'rgba(255,255,255,0.15)', 
+            borderRadius: '12px',
+            padding: '16px 20px',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ fontSize: '24px', fontWeight: '700' }}>
+              {aiKeys.length}
+            </div>
+            <div style={{ fontSize: '14px', opacity: '0.9' }}>
+              AI Services
             </div>
           </div>
         </div>
-      )}
+        
+        {/* Action Button */}
+        {connections.length > 0 && (
+          <div style={{ marginTop: '24px' }}>
+            <button
+              onClick={syncAllPlatforms}
+              disabled={loading}
+              style={{
+                backgroundColor: loading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
+                color: 'white',
+                border: '2px solid rgba(255,255,255,0.3)',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.2s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.target.style.backgroundColor = 'rgba(255,255,255,0.25)';
+                  e.target.style.transform = 'translateY(-1px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.target.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                  e.target.style.transform = 'none';
+                }
+              }}
+            >
+              {loading ? (
+                <>
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTop: '2px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }} />
+                  <span>Syncing All...</span>
+                </>
+              ) : (
+                <>
+                  <span>🔄</span>
+                  <span>Sync All Platforms</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div style={{ padding: '32px' }}>
+
+        {/* Section Navigation */}
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ 
+            display: 'flex', 
+            backgroundColor: '#f1f5f9',
+            borderRadius: '12px',
+            padding: '6px',
+            gap: '6px'
+          }}>
+            <button
+              onClick={() => setActiveSection('advertising')}
+              style={{
+                flex: 1,
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: activeSection === 'advertising' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                color: activeSection === 'advertising' ? '#1e293b' : '#64748b',
+                fontSize: '15px',
+                fontWeight: activeSection === 'advertising' ? '600' : '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: activeSection === 'advertising' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>🎯</span>
+              <span>Advertising Platforms</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveSection('ai');
+                if (Object.keys(aiServices).length === 0) {
+                  loadAiServices();
+                }
+              }}
+              style={{
+                flex: 1,
+                padding: '16px 24px',
+                border: 'none',
+                backgroundColor: activeSection === 'ai' ? 'white' : 'transparent',
+                borderRadius: '8px',
+                color: activeSection === 'ai' ? '#1e293b' : '#64748b',
+                fontSize: '15px',
+                fontWeight: activeSection === 'ai' ? '600' : '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: activeSection === 'ai' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>🤖</span>
+              <span>AI Creative Services</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Connection Status Overview */}
+        {syncStatus && (
+          <div style={{ 
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '16px', 
+            padding: '24px', 
+            marginBottom: '32px',
+            color: 'white'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                marginRight: '12px'
+              }}>
+                📊
+              </div>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', margin: 0 }}>Sync Status</h3>
+            </div>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+              gap: '20px' 
+            }}>
+              <div style={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '16px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', marginBottom: '4px' }}>
+                  {syncStatus.connected_platforms}
+                </div>
+                <div style={{ fontSize: '14px', opacity: '0.9' }}>Connected Platforms</div>
+              </div>
+              
+              <div style={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '16px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', marginBottom: '4px' }}>
+                  {syncStatus.total_campaigns}
+                </div>
+                <div style={{ fontSize: '14px', opacity: '0.9' }}>Total Campaigns</div>
+              </div>
+              
+              <div style={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderRadius: '12px',
+                padding: '16px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div style={{ fontSize: '14px', opacity: '0.9', marginBottom: '4px' }}>Last Global Sync</div>
+                <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                  {syncStatus.last_global_sync ? 
+                    new Date(syncStatus.last_global_sync).toLocaleString() : 
+                    'Never'
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Advertising Platforms Section */}
       {activeSection === 'advertising' && (
         <>
           {/* Available Platforms */}
-          <div style={{ marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Available Platforms</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
+          <div style={{ marginBottom: '40px' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ 
+                fontSize: '24px', 
+                fontWeight: '700', 
+                marginBottom: '8px',
+                color: '#1e293b'
+              }}>
+                🎯 Advertising Platforms
+              </h3>
+              <p style={{ 
+                fontSize: '16px', 
+                color: '#64748b',
+                margin: 0,
+                lineHeight: '1.6'
+              }}>
+                Connect your advertising accounts to sync campaigns, automate bidding, and optimize performance in real-time.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
           {availablePlatforms.map(platform => {
             const isConnected = connectedPlatformIds.includes(platform.id);
             const connection = connections.find(c => c.platform === platform.id);
@@ -726,21 +921,81 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
               <div
                 key={platform.id}
                 style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '16px',
-                  backgroundColor: isConnected ? '#f0fdf4' : 'white'
+                  border: isConnected ? '2px solid #10b981' : '2px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  backgroundColor: isConnected ? '#f0fdf4' : 'white',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isConnected) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 25px -8px rgba(0, 0, 0, 0.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isConnected) {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '24px', marginRight: '8px' }}>{platform.icon}</span>
-                  <div>
-                    <h4 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>{platform.name}</h4>
-                    {isConnected && connection && (
-                      <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                        {connection.account_name}
-                      </p>
-                    )}
+                {isConnected && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    width: '24px',
+                    height: '24px',
+                    backgroundColor: '#10b981',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '12px'
+                  }}>
+                    ✓
+                  </div>
+                )}
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      backgroundColor: platform.color,
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      marginRight: '12px',
+                      boxShadow: `0 4px 12px -4px ${platform.color}40`
+                    }}>
+                      {platform.icon}
+                    </div>
+                    <div>
+                      <h4 style={{ 
+                        fontSize: '18px', 
+                        fontWeight: '700', 
+                        margin: '0 0 4px 0',
+                        color: '#1e293b'
+                      }}>
+                        {platform.name}
+                      </h4>
+                      {isConnected && connection && (
+                        <p style={{ 
+                          fontSize: '14px', 
+                          color: '#64748b', 
+                          margin: 0,
+                          fontWeight: '500'
+                        }}>
+                          {connection.account_name}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
@@ -749,18 +1004,26 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                     <div style={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      marginBottom: '8px',
-                      fontSize: '12px',
-                      color: connection.status === 'active' ? '#059669' : '#dc2626'
+                      marginBottom: '12px',
+                      padding: '12px',
+                      backgroundColor: connection.status === 'active' ? '#dcfce7' : '#fef2f2',
+                      borderRadius: '8px',
+                      border: `1px solid ${connection.status === 'active' ? '#bbf7d0' : '#fecaca'}`
                     }}>
                       <span style={{ 
-                        width: '8px', 
-                        height: '8px', 
+                        width: '12px', 
+                        height: '12px', 
                         borderRadius: '50%', 
                         backgroundColor: connection.status === 'active' ? '#10b981' : '#ef4444',
-                        marginRight: '6px'
+                        marginRight: '8px'
                       }} />
-                      {connection.status === 'active' ? 'Connected' : 'Connection Issues'}
+                      <span style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: connection.status === 'active' ? '#059669' : '#dc2626'
+                      }}>
+                        {connection.status === 'active' ? '✅ Connected & Active' : '❌ Connection Issues'}
+                      </span>
                     </div>
                     
                     {connection.last_sync && (
@@ -775,15 +1038,29 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                         disabled={loading}
                         style={{
                           backgroundColor: 'white',
-                          color: '#374151',
-                          border: '1px solid #d1d5db',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
+                          color: '#64748b',
+                          border: '2px solid #e2e8f0',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!loading) {
+                            e.target.style.borderColor = '#cbd5e1';
+                            e.target.style.color = '#475569';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!loading) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.color = '#64748b';
+                          }
                         }}
                       >
-                        Test
+                        🔍 Test
                       </button>
                       <button
                         onClick={() => syncPlatform(platform.id)}
@@ -792,28 +1069,57 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                           backgroundColor: '#3b82f6',
                           color: 'white',
                           border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!loading) {
+                            e.target.style.backgroundColor = '#2563eb';
+                            e.target.style.transform = 'translateY(-1px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!loading) {
+                            e.target.style.backgroundColor = '#3b82f6';
+                            e.target.style.transform = 'none';
+                          }
                         }}
                       >
-                        Sync
+                        🔄 Sync
                       </button>
                       <button
                         onClick={() => disconnectPlatform(platform.id)}
                         disabled={loading}
                         style={{
-                          backgroundColor: '#ef4444',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
+                          backgroundColor: 'white',
+                          color: '#ef4444',
+                          border: '2px solid #fecaca',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!loading) {
+                            e.target.style.backgroundColor = '#fef2f2';
+                            e.target.style.borderColor = '#f87171';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!loading) {
+                            e.target.style.backgroundColor = 'white';
+                            e.target.style.borderColor = '#fecaca';
+                          }
                         }}
                       >
-                        Disconnect
+                        🗑️ Disconnect
                       </button>
                     </div>
                   </div>
@@ -825,14 +1131,50 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                       backgroundColor: platform.color,
                       color: 'white',
                       border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      width: '100%'
+                      padding: '16px 24px',
+                      borderRadius: '12px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      width: '100%',
+                      transition: 'all 0.2s ease',
+                      boxShadow: `0 4px 12px -4px ${platform.color}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = `0 8px 25px -8px ${platform.color}`;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!loading) {
+                        e.target.style.transform = 'none';
+                        e.target.style.boxShadow = `0 4px 12px -4px ${platform.color}`;
+                      }
                     }}
                   >
-                    {loading ? 'Connecting...' : `Connect ${platform.name}`}
+                    {loading ? (
+                      <>
+                        <div style={{
+                          width: '16px',
+                          height: '16px',
+                          border: '2px solid rgba(255,255,255,0.3)',
+                          borderTop: '2px solid white',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite'
+                        }} />
+                        <span>Connecting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔗</span>
+                        <span>Connect {platform.name}</span>
+                      </>
+                    )}
                   </button>
                 )}
                 
@@ -883,30 +1225,68 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
         </>
       )}
 
-      {/* AI Services Section */}
-      {activeSection === 'ai' && (
-        <>
-          <div style={{ marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>AI Creative Services</h3>
-            <div style={{ display: 'grid', gap: '24px' }}>
+        {/* AI Services Section */}
+        {activeSection === 'ai' && (
+          <>
+            <div style={{ marginBottom: '40px' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ 
+                  fontSize: '24px', 
+                  fontWeight: '700', 
+                  marginBottom: '8px',
+                  color: '#1e293b'
+                }}>
+                  🤖 AI Creative Services
+                </h3>
+                <p style={{ 
+                  fontSize: '16px', 
+                  color: '#64748b',
+                  margin: 0,
+                  lineHeight: '1.6'
+                }}>
+                  Connect AI services to power your creative generation, copywriting, video creation, and audio production.
+                </p>
+              </div>
+              <div style={{ display: 'grid', gap: '32px' }}>
               {['text', 'video', 'audio'].map(category => {
                 console.log(`Rendering category ${category}, services:`, aiServices[category]);
                 return (
                   <div key={category} style={{
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '20px',
-                    backgroundColor: '#f8fafc'
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    backgroundColor: '#f8fafc',
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
                   }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', textTransform: 'capitalize' }}>
-                      {category === 'text' ? '✍️ Text & Copywriting' : 
-                       category === 'video' ? '🎥 Video Creation' : 
-                       '🎵 Audio Creation'}
-                      <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 'normal', marginLeft: '8px' }}>
-                        ({aiServices[category]?.length || 0} services)
-                      </span>
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                      <h4 style={{ 
+                        fontSize: '20px', 
+                        fontWeight: '700', 
+                        marginBottom: '4px',
+                        color: '#1e293b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span style={{ fontSize: '24px' }}>
+                          {category === 'text' ? '✍️' : 
+                           category === 'video' ? '🎥' : 
+                           '🎵'}
+                        </span>
+                        {category === 'text' ? 'Text & Copywriting' : 
+                         category === 'video' ? 'Video Creation' : 
+                         'Audio Creation'}
+                      </h4>
+                      <p style={{ 
+                        fontSize: '14px', 
+                        color: '#64748b', 
+                        margin: 0,
+                        fontWeight: '500'
+                      }}>
+                        {aiServices[category]?.length || 0} services available
+                      </p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                       {aiServices[category]?.length ? aiServices[category].map(service => {
                       const isConnected = isAiServiceConnected(service.id);
                       const status = getAiServiceStatus(service.id);
@@ -915,17 +1295,62 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                         <div
                           key={service.id}
                           style={{
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '6px',
-                            padding: '16px',
-                            backgroundColor: isConnected ? '#f0fdf4' : 'white'
+                            border: isConnected ? '2px solid #10b981' : '2px solid #e2e8f0',
+                            borderRadius: '12px',
+                            padding: '20px',
+                            backgroundColor: isConnected ? '#f0fdf4' : 'white',
+                            transition: 'all 0.2s ease',
+                            position: 'relative',
+                            boxShadow: isConnected ? '0 4px 12px -4px rgba(16, 185, 129, 0.3)' : '0 2px 4px rgba(0,0,0,0.05)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = isConnected ? 
+                              '0 8px 25px -8px rgba(16, 185, 129, 0.4)' : 
+                              '0 4px 12px -4px rgba(0, 0, 0, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'none';
+                            e.currentTarget.style.boxShadow = isConnected ? 
+                              '0 4px 12px -4px rgba(16, 185, 129, 0.3)' : 
+                              '0 2px 4px rgba(0,0,0,0.05)';
                           }}
                         >
-                          <div style={{ marginBottom: '12px' }}>
-                            <h5 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                          {isConnected && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '16px',
+                              right: '16px',
+                              width: '24px',
+                              height: '24px',
+                              backgroundColor: '#10b981',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              ✓
+                            </div>
+                          )}
+                          <div style={{ marginBottom: '16px' }}>
+                            <h5 style={{ 
+                              fontSize: '16px', 
+                              fontWeight: '700', 
+                              margin: '0 0 8px 0',
+                              color: '#1e293b'
+                            }}>
                               {service.name}
                             </h5>
-                            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.4' }}>
+                            <p style={{ 
+                              fontSize: '14px', 
+                              color: '#64748b', 
+                              margin: 0, 
+                              lineHeight: '1.5',
+                              fontWeight: '400'
+                            }}>
                               {service.description}
                             </p>
                           </div>
@@ -933,53 +1358,100 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                           <div style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
-                            marginBottom: '12px',
-                            fontSize: '12px',
-                            color: status === 'active' ? '#059669' : status === 'error' ? '#dc2626' : '#6b7280'
+                            marginBottom: '16px',
+                            padding: '8px 12px',
+                            backgroundColor: status === 'active' ? '#dcfce7' : status === 'error' ? '#fef2f2' : '#f1f5f9',
+                            borderRadius: '8px',
+                            border: `1px solid ${status === 'active' ? '#bbf7d0' : status === 'error' ? '#fecaca' : '#e2e8f0'}`
                           }}>
                             <span style={{ 
-                              width: '8px', 
-                              height: '8px', 
+                              width: '10px', 
+                              height: '10px', 
                               borderRadius: '50%', 
                               backgroundColor: status === 'active' ? '#10b981' : status === 'error' ? '#ef4444' : '#9ca3af',
-                              marginRight: '6px'
+                              marginRight: '8px'
                             }} />
-                            {status === 'active' ? 'Connected' : status === 'error' ? 'Connection Error' : 'Not Connected'}
+                            <span style={{
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              color: status === 'active' ? '#059669' : status === 'error' ? '#dc2626' : '#64748b'
+                            }}>
+                              {status === 'active' ? '✅ Connected' : status === 'error' ? '❌ Connection Error' : '⚪ Not Connected'}
+                            </span>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {!isConnected ? (
-                              <button
-                                onClick={() => openAiServiceForm(service.id)}
-                                style={{
-                                  backgroundColor: '#3b82f6',
-                                  color: 'white',
-                                  border: 'none',
-                                  padding: '6px 12px',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Add API Key
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => testAiApiKey(service.id)}
-                                disabled={loading}
-                                style={{
-                                  backgroundColor: 'white',
-                                  color: '#374151',
-                                  border: '1px solid #d1d5db',
-                                  padding: '6px 12px',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Test
-                              </button>
-                            )}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              {!isConnected ? (
+                                <button
+                                  onClick={() => openAiServiceForm(service.id)}
+                                  style={{
+                                    backgroundColor: '#3b82f6',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.backgroundColor = '#2563eb';
+                                    e.target.style.transform = 'translateY(-1px)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.backgroundColor = '#3b82f6';
+                                    e.target.style.transform = 'none';
+                                  }}
+                                >
+                                  <span>🔑</span>
+                                  <span>Add API Key</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => testAiApiKey(service.id)}
+                                  disabled={loading}
+                                  style={{
+                                    backgroundColor: 'white',
+                                    color: '#64748b',
+                                    border: '2px solid #e2e8f0',
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!loading) {
+                                      e.target.style.borderColor = '#cbd5e1';
+                                      e.target.style.color = '#475569';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!loading) {
+                                      e.target.style.borderColor = '#e2e8f0';
+                                      e.target.style.color = '#64748b';
+                                    }
+                                  }}
+                                >
+                                  <span>🔍</span>
+                                  <span>Test Connection</span>
+                                </button>
+                              )}
+                            </div>
                             
                             <a
                               href={service.website}
@@ -987,12 +1459,26 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                               rel="noopener noreferrer"
                               style={{
                                 color: '#3b82f6',
-                                fontSize: '12px',
+                                fontSize: '14px',
                                 textDecoration: 'none',
-                                padding: '6px 0'
+                                fontWeight: '500',
+                                textAlign: 'center',
+                                padding: '8px',
+                                backgroundColor: '#f0f9ff',
+                                borderRadius: '6px',
+                                border: '1px solid #bae6fd',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = '#e0f2fe';
+                                e.target.style.borderColor = '#7dd3fc';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = '#f0f9ff';
+                                e.target.style.borderColor = '#bae6fd';
                               }}
                             >
-                              Get API Key →
+                              🔗 Get API Key from {service.name} →
                             </a>
                           </div>
                         </div>
@@ -1000,11 +1486,24 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
                     }) : (
                       <div style={{
                         textAlign: 'center',
-                        padding: '20px',
-                        color: '#6b7280',
-                        fontSize: '14px'
+                        padding: '40px 20px',
+                        color: '#64748b',
+                        fontSize: '16px',
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        border: '2px dashed #e2e8f0'
                       }}>
-                        No services loaded for {category}
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+                          {category === 'text' ? '📝' : 
+                           category === 'video' ? '🎥' : 
+                           '🎵'}
+                        </div>
+                        <div style={{ fontWeight: '600', marginBottom: '8px' }}>
+                          No {category} services loaded
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#9ca3af' }}>
+                          Services will appear here once the API is connected
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1259,6 +1758,14 @@ export default function ApiConnectionManager({ userId = 'demo_user' }) {
           </div>
         </div>
       )}
+      </div>
+      
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

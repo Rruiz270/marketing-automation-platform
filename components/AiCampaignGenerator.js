@@ -472,22 +472,46 @@ Generate content that positions Alumni not just as an English school, but as a g
             </div>
           </div>
 
-          <div style={{ marginTop: '32px', textAlign: 'center' }}>
+          <div style={{ marginTop: '40px', textAlign: 'center' }}>
+            {(!campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone) && (
+              <div style={{ 
+                marginBottom: '16px',
+                padding: '12px 20px',
+                backgroundColor: '#fef3c7',
+                border: '1px solid #fed7aa',
+                borderRadius: '8px',
+                display: 'inline-block'
+              }}>
+                <div style={{ fontSize: '14px', color: '#92400e', fontWeight: '500' }}>
+                  ⚠️ Please select all required fields to continue
+                </div>
+                <div style={{ fontSize: '12px', color: '#d97706', marginTop: '4px' }}>
+                  Target Audience, Campaign Objective, and Tone are required
+                </div>
+              </div>
+            )}
+            
             <button
               onClick={() => setActiveStep(2)}
               disabled={!campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone}
               style={{
-                backgroundColor: !campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone ? '#9ca3af' : '#3b82f6',
+                backgroundColor: !campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone ? '#cbd5e1' : '#3b82f6',
                 color: 'white',
                 border: 'none',
-                padding: '12px 32px',
-                borderRadius: '8px',
+                padding: '16px 40px',
+                borderRadius: '12px',
                 fontSize: '16px',
                 fontWeight: '600',
-                cursor: !campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone ? 'not-allowed' : 'pointer'
+                cursor: !campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone ? 'not-allowed' : 'pointer',
+                boxShadow: !campaignData.targetAudience || !campaignData.campaignObjective || !campaignData.tone ? 'none' : '0 4px 12px -2px rgba(59, 130, 246, 0.5)',
+                transition: 'all 0.2s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              Continue to Review →
+              <span>Continue to Review</span>
+              <span style={{ fontSize: '18px' }}>→</span>
             </button>
           </div>
         </div>
@@ -523,38 +547,106 @@ Generate content that positions Alumni not just as an English school, but as a g
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <button
-              onClick={() => setActiveStep(1)}
-              style={{
-                backgroundColor: '#6b7280',
-                color: 'white',
-                border: 'none',
-                padding: '10px 24px',
-                borderRadius: '6px',
-                fontSize: '14px',
-                marginRight: '12px',
-                cursor: 'pointer'
-              }}
-            >
-              ← Back to Edit
-            </button>
-            <button
-              onClick={generateCampaignContent}
-              disabled={loading}
-              style={{
-                backgroundColor: loading ? '#9ca3af' : '#10b981',
-                color: 'white',
-                border: 'none',
-                padding: '12px 32px',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {loading ? 'Generating Campaign...' : '🚀 Generate Campaign Content'}
-            </button>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                display: 'inline-block',
+                padding: '16px 24px',
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: '#166534', marginBottom: '4px' }}>
+                  ✅ Ready to Generate!
+                </div>
+                <div style={{ fontSize: '14px', color: '#16a34a' }}>
+                  AI will create personalized content for Alumni English School
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', alignItems: 'center' }}>
+              <button
+                onClick={() => setActiveStep(1)}
+                style={{
+                  backgroundColor: 'white',
+                  color: '#6b7280',
+                  border: '2px solid #e5e7eb',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>←</span>
+                <span>Back to Edit</span>
+              </button>
+              
+              <button
+                onClick={generateCampaignContent}
+                disabled={loading}
+                style={{
+                  backgroundColor: loading ? '#9ca3af' : '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  padding: '16px 40px',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: loading ? 'none' : '0 8px 25px -8px rgba(16, 185, 129, 0.5)',
+                  transition: 'all 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 12px 35px -8px rgba(16, 185, 129, 0.6)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) {
+                    e.target.style.transform = 'none';
+                    e.target.style.boxShadow = '0 8px 25px -8px rgba(16, 185, 129, 0.5)';
+                  }
+                }}
+              >
+                {loading ? (
+                  <>
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      border: '2px solid #ffffff',
+                      borderTop: '2px solid transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    <span>Generating Campaign...</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '20px' }}>🚀</span>
+                    <span>Generate Campaign Content</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+          
+          <style jsx>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
         </div>
       )}
 
