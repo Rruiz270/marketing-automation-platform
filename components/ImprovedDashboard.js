@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import RealTimeOptimization from './RealTimeOptimization';
-import AiCampaignGenerator from './AiCampaignGenerator';
+import AdvancedCampaignBuilder from './AdvancedCampaignBuilder';
 import AutonomousAiDashboard from './AutonomousAiDashboard';
 import ApiConnectionManager from './ApiConnectionManager';
+import IntelligentPerformanceMonitor from './IntelligentPerformanceMonitor';
 
 export default function ImprovedDashboard() {
   const [activeSection, setActiveSection] = useState('getting-started');
@@ -48,25 +49,32 @@ export default function ImprovedDashboard() {
       color: '#3b82f6'
     },
     { 
-      id: 'ai-suite', 
-      title: 'AI Marketing Suite', 
-      icon: '🤖',
-      description: 'Predict performance & create campaigns',
+      id: 'campaign-builder', 
+      title: 'Campaign Builder', 
+      icon: '🎯',
+      description: 'Step-by-step AI campaign creation',
+      color: '#10b981'
+    },
+    { 
+      id: 'performance-monitor', 
+      title: 'Performance Monitor', 
+      icon: '📊',
+      description: 'Intelligent insights & optimization',
       color: '#8b5cf6'
     },
     { 
-      id: 'campaign-generator', 
-      title: 'Campaign Builder', 
-      icon: '🎯',
-      description: 'Generate Alumni-specific campaigns',
-      color: '#10b981'
+      id: 'ai-suite', 
+      title: 'AI Marketing Suite', 
+      icon: '🤖',
+      description: 'Advanced AI automation features',
+      color: '#f59e0b'
     },
     { 
       id: 'optimization', 
       title: 'Auto-Optimization', 
       icon: '⚡',
-      description: '24/7 performance optimization',
-      color: '#f59e0b'
+      description: '24/7 real-time optimization',
+      color: '#14b8a6'
     },
     { 
       id: 'api-connections', 
@@ -244,7 +252,7 @@ export default function ImprovedDashboard() {
                   margin: '0 auto',
                   lineHeight: '1.6'
                 }}>
-                  Get your AI-powered marketing automation up and running in just 3 simple steps.
+                  Professional-grade campaign management with step-by-step AI guidance. Create, monitor, and optimize campaigns like a marketing expert.
                 </p>
               </div>
 
@@ -339,17 +347,17 @@ export default function ImprovedDashboard() {
                       color: '#1e293b',
                       margin: '0 0 8px 0'
                     }}>
-                      Generate Your First Campaign
+                      Build Your First Campaign
                     </h3>
                     <p style={{ 
                       fontSize: '14px', 
                       color: '#64748b',
                       margin: '0 0 16px 0'
                     }}>
-                      Create AI-powered campaigns specifically optimized for Alumni English School.
+                      Step-by-step wizard with AI market research, competitor analysis, and intelligent recommendations.
                     </p>
                     <button
-                      onClick={() => setActiveSection('campaign-generator')}
+                      onClick={() => setActiveSection('campaign-builder')}
                       disabled={!userProgress.apiKeysConnected}
                       style={{
                         padding: '12px 24px',
@@ -362,7 +370,7 @@ export default function ImprovedDashboard() {
                         cursor: userProgress.apiKeysConnected ? 'pointer' : 'not-allowed'
                       }}
                     >
-                      🎯 Create Campaign
+                      🎯 Build Campaign
                     </button>
                   </div>
                 </div>
@@ -399,21 +407,21 @@ export default function ImprovedDashboard() {
                       color: '#1e293b',
                       margin: '0 0 8px 0'
                     }}>
-                      Start Auto-Optimization
+                      Monitor & Optimize
                     </h3>
                     <p style={{ 
                       fontSize: '14px', 
                       color: '#64748b',
                       margin: '0 0 16px 0'
                     }}>
-                      Let AI optimize your campaigns 24/7 with automatic budget adjustments.
+                      Intelligent performance monitoring with automatic competitor analysis and optimization suggestions.
                     </p>
                     <button
-                      onClick={() => setActiveSection('optimization')}
+                      onClick={() => setActiveSection('performance-monitor')}
                       disabled={!userProgress.apiKeysConnected}
                       style={{
                         padding: '12px 24px',
-                        backgroundColor: userProgress.apiKeysConnected ? '#f59e0b' : '#94a3b8',
+                        backgroundColor: userProgress.apiKeysConnected ? '#8b5cf6' : '#94a3b8',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
@@ -422,7 +430,7 @@ export default function ImprovedDashboard() {
                         cursor: userProgress.apiKeysConnected ? 'pointer' : 'not-allowed'
                       }}
                     >
-                      ⚡ Start Optimization
+                      📊 Monitor Performance
                     </button>
                   </div>
                 </div>
@@ -470,14 +478,19 @@ export default function ImprovedDashboard() {
             </div>
           )}
 
+          {/* Campaign Builder */}
+          {activeSection === 'campaign-builder' && (
+            <AdvancedCampaignBuilder userId="demo_user" />
+          )}
+
+          {/* Performance Monitor */}
+          {activeSection === 'performance-monitor' && (
+            <IntelligentPerformanceMonitor campaignId="demo_campaign" userId="demo_user" />
+          )}
+
           {/* AI Suite */}
           {activeSection === 'ai-suite' && (
             <AutonomousAiDashboard userId="demo_user" />
-          )}
-
-          {/* Campaign Generator */}
-          {activeSection === 'campaign-generator' && (
-            <AiCampaignGenerator userId="demo_user" />
           )}
 
           {/* Optimization */}
