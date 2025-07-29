@@ -1,0 +1,4 @@
+FORCE_DEPLOYMENT=true
+TIMESTAMP=2024-07-29T$(date +%H%M%S)
+VERSION=complete-7-step-campaign-builder
+COMMIT_HASH=$(git rev-parse HEAD)
