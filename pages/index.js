@@ -3,6 +3,7 @@ import ApiConnectionManager from '../components/ApiConnectionManager';
 import AiCreativeGenerator from '../components/AiCreativeGenerator';
 import AiCampaignGenerator from '../components/AiCampaignGenerator';
 import RealTimeOptimization from '../components/RealTimeOptimization';
+import AutonomousAiDashboard from '../components/AutonomousAiDashboard';
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState('7d');
@@ -93,8 +94,9 @@ export default function Dashboard() {
           <nav style={{ display: 'flex', gap: '32px' }}>
             {[
               { id: 'overview', label: 'Overview', icon: '📊' },
+              { id: 'autonomous-ai', label: 'Autonomous AI Suite', icon: '🤖' },
               { id: 'campaign-generator', label: 'AI Campaign Generator', icon: '🎯' },
-              { id: 'automation', label: 'AI Automation', icon: '🤖' },
+              { id: 'automation', label: 'Real-Time Optimization', icon: '⚡' },
               { id: 'insights', label: 'Predictive Insights', icon: '🔮' },
               { id: 'connections', label: 'API Connections', icon: '🔗' },
               { id: 'audit', label: 'Audit & Compliance', icon: '📋' }
@@ -434,6 +436,11 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Autonomous AI Suite Tab */}
+        {activeTab === 'autonomous-ai' && (
+          <AutonomousAiDashboard userId="demo_user" />
         )}
 
         {/* AI Campaign Generator Tab */}
