@@ -149,6 +149,7 @@ export default async function handler(req, res) {
           api_key_preview: api_key.substring(0, 12) + '...' + api_key.substring(api_key.length - 4), // Store preview only
           status: 'active',
           enabled: true,
+          is_default: false, // New field for default service
           created_at: new Date().toISOString(),
           last_tested: new Date().toISOString(),
           test_result: testResult
@@ -210,6 +211,35 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: `${AI_SERVICES[service].name} disconnected successfully`
+        });
+
+      case 'set_default_service':
+        if (!service) {
+          return res.status(400).json({ error: 'Service is required' });
+        }
+
+        const defaultKeyId = `${user_id}_${service}`;
+        if (!storedKeys[defaultKeyId]) {
+          return res.status(404).json({ error: 'API key not found' });
+        }
+
+        // Remove default from all other services for this user
+        Object.values(storedKeys).forEach(key => {
+          if (key.user_id === user_id) {
+            key.is_default = false;
+          }
+        });
+
+        // Set this service as default
+        storedKeys[defaultKeyId].is_default = true;
+        storedKeys[defaultKeyId].updated_at = new Date().toISOString();
+
+        saveStoredKeys(storedKeys);
+
+        return res.status(200).json({
+          success: true,
+          message: `${AI_SERVICES[service].name} set as default AI service`,
+          data: storedKeys[defaultKeyId]
         });
 
       case 'test_api_key':

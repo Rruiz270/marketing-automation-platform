@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import AiServiceSelector from './AiServiceSelector';
 
 export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalApiKeys = [], onApiKeysUpdated }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -19,6 +20,8 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
   const [researchData, setResearchData] = useState(null);
   const [campaignRecommendations, setCampaignRecommendations] = useState([]);
   const [competitorInsights, setCompetitorInsights] = useState(null);
+  const [showAiSelector, setShowAiSelector] = useState(false);
+  const [aiSelectorTask, setAiSelectorTask] = useState(null);
 
   // Campaign building steps
   const steps = [
@@ -136,6 +139,14 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
     return aiConnections.filter(conn => conn.status === 'active' && conn.enabled !== false);
   };
 
+  const getDefaultAiService = () => {
+    return aiConnections.find(conn => conn.status === 'active' && conn.enabled !== false && conn.is_default);
+  };
+
+  const getActiveAiServices = () => {
+    return aiConnections.filter(conn => conn.status === 'active' && conn.enabled !== false);
+  };
+
   const checkAiCapabilities = () => {
     const connected = getConnectedAiServices();
     const capabilities = {
@@ -147,8 +158,31 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
     return capabilities;
   };
 
-  // Intelligent market research
-  const conductMarketResearch = async () => {
+  // Show AI selector and then conduct market research
+  const initiateConductMarketResearch = () => {
+    const activeServices = getActiveAiServices();
+    const defaultService = getDefaultAiService();
+    
+    if (activeServices.length === 0) {
+      alert('Please connect at least one AI service to conduct market research.');
+      return;
+    }
+    
+    if (activeServices.length === 1) {
+      // Only one service available, use it directly
+      conductMarketResearch(activeServices[0]);
+    } else {
+      // Multiple services available, show selector
+      setAiSelectorTask({
+        description: "Market Research Analysis",
+        callback: conductMarketResearch
+      });
+      setShowAiSelector(true);
+    }
+  };
+
+  // Intelligent market research with selected AI service
+  const conductMarketResearch = async (selectedAiService) => {
     setLoading(true);
     try {
       const response = await fetch('/api/ai/market-research', {
@@ -159,7 +193,9 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
           industry: 'English Education',
           company: 'Alumni English School',
           competitors: campaignData.competitors,
-          budget: campaignData.budget
+          budget: campaignData.budget,
+          ai_service: selectedAiService.service,
+          ai_service_name: selectedAiService.service_name
         })
       });
 
@@ -693,7 +729,7 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
               </div>
 
               <button
-                onClick={conductMarketResearch}
+                onClick={initiateConductMarketResearch}
                 disabled={loading || !campaignData.budget}
                 style={{
                   backgroundColor: loading ? '#9ca3af' : '#3b82f6',
@@ -847,6 +883,23 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
           </div>
         )}
       </div>
+
+      {/* AI Service Selector Modal */}
+      <AiServiceSelector
+        isOpen={showAiSelector}
+        onClose={() => setShowAiSelector(false)}
+        onSelect={(service) => {
+          if (aiSelectorTask) {
+            aiSelectorTask.callback(service);
+          }
+          setShowAiSelector(false);
+          setAiSelectorTask(null);
+        }}
+        availableServices={getActiveAiServices()}
+        defaultService={getDefaultAiService()}
+        taskDescription={aiSelectorTask?.description || "AI task"}
+        allowSkip={true}
+      />
 
       <style jsx>{`
         @keyframes spin {

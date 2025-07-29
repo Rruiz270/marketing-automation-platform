@@ -487,6 +487,50 @@ export default function ApiConnectionManager({ userId = 'demo_user', globalApiKe
     return key.status || 'active';
   };
 
+  const isDefaultService = (serviceId) => {
+    const key = aiKeys.find(key => key.service === serviceId);
+    return key?.is_default || false;
+  };
+
+  const setDefaultService = async (serviceId) => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/ai-keys-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'set_default_service',
+          user_id: userId,
+          service: serviceId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        // Update local state immediately for better UX
+        setAiKeys(prevKeys => 
+          prevKeys.map(key => ({
+            ...key,
+            is_default: key.service === serviceId
+          }))
+        );
+        // Also reload to ensure consistency
+        loadAiKeys();
+        // Notify parent component
+        if (onApiKeysUpdated) {
+          onApiKeysUpdated();
+        }
+      } else {
+        alert('Error setting default service: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error setting default AI service:', error);
+      alert('Error setting default service: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const availablePlatforms = [
     { id: 'google_ads', name: 'Google Ads', icon: '🔍', color: '#4285f4' },
     { id: 'facebook_ads', name: 'Facebook Ads', icon: '📘', color: '#1877f2' },
@@ -1524,20 +1568,22 @@ export default function ApiConnectionManager({ userId = 'demo_user', globalApiKe
                                   alignItems: 'center',
                                   justifyContent: 'space-between',
                                   padding: '12px 16px',
-                                  backgroundColor: '#f0fdf4',
+                                  backgroundColor: isDefaultService(service.id) ? '#eff6ff' : '#f0fdf4',
                                   borderRadius: '8px',
-                                  border: '1px solid #bbf7d0'
+                                  border: `1px solid ${isDefaultService(service.id) ? '#93c5fd' : '#bbf7d0'}`
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '16px' }}>🔗</span>
-                                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#065f46' }}>
-                                      Connected
+                                    <span style={{ fontSize: '16px' }}>
+                                      {isDefaultService(service.id) ? '🌟' : '🔗'}
+                                    </span>
+                                    <span style={{ fontSize: '14px', fontWeight: '600', color: isDefaultService(service.id) ? '#1d4ed8' : '#065f46' }}>
+                                      {isDefaultService(service.id) ? 'Default Service' : 'Connected'}
                                     </span>
                                   </div>
                                   
                                   {/* Toggle Switch */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '12px', color: '#047857' }}>
+                                    <span style={{ fontSize: '12px', color: isDefaultService(service.id) ? '#1e40af' : '#047857' }}>
                                       {getAiServiceStatus(service.id) === 'active' ? 'Enabled' : 'Disabled'}
                                     </span>
                                     <div
@@ -1566,6 +1612,38 @@ export default function ApiConnectionManager({ userId = 'demo_user', globalApiKe
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* Default Service Selection */}
+                                {!isDefaultService(service.id) && getAiServiceStatus(service.id) === 'active' && (
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '8px 12px',
+                                    backgroundColor: '#fef3c7',
+                                    borderRadius: '6px',
+                                    border: '1px solid #fed7aa'
+                                  }}>
+                                    <button
+                                      onClick={() => setDefaultService(service.id)}
+                                      disabled={loading}
+                                      style={{
+                                        backgroundColor: 'transparent',
+                                        color: '#d97706',
+                                        border: 'none',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}
+                                    >
+                                      <span>🌟</span>
+                                      <span>Set as Default</span>
+                                    </button>
+                                  </div>
+                                )}
 
                                 {/* Action Buttons */}
                                 <div style={{ display: 'flex', gap: '8px' }}>

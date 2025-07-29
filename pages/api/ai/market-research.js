@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { objective, industry, company, competitors, budget } = req.body;
+  const { objective, industry, company, competitors, budget, ai_service, ai_service_name } = req.body;
 
   try {
     const openai = new OpenAI({
@@ -125,13 +125,16 @@ Format as JSON array with objects containing: {strategy, audience, platforms, bu
         competitor_analysis: competitorAnalysis,
         market_opportunities: opportunities,
         research_timestamp: new Date().toISOString(),
-        confidence_score: 87
+        confidence_score: ai_service === 'openai' ? 95 : ai_service === 'claude' ? 92 : 87,
+        ai_service_used: ai_service_name || 'Default AI'
       },
       recommendations: recommendations,
       metadata: {
         research_depth: 'comprehensive',
         data_sources: ['market_analysis', 'competitor_intelligence', 'audience_research'],
-        last_updated: new Date().toISOString()
+        last_updated: new Date().toISOString(),
+        processed_by: ai_service_name || 'Default AI Service',
+        service_id: ai_service || 'default'
       }
     });
 
