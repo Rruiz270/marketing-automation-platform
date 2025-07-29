@@ -1,0 +1,4 @@
+DEPLOYMENT_TIMESTAMP=2024-07-29
+CAMPAIGN_BUILDER_VERSION=7-step-complete
+FEATURES=company-registration,ai-campaign-builder,performance-analyzer
+STATUS=production-ready
