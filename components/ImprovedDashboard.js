@@ -26,6 +26,18 @@ export default function ImprovedDashboard() {
     }
   }, [activeSection]);
 
+  // Listen for navigation events from child components
+  useEffect(() => {
+    const handleNavigation = (event) => {
+      if (event.detail) {
+        setActiveSection(event.detail);
+      }
+    };
+
+    window.addEventListener('navigate-to-api', handleNavigation);
+    return () => window.removeEventListener('navigate-to-api', handleNavigation);
+  }, []);
+
   const checkUserProgress = async () => {
     try {
       // Check if AI keys are connected

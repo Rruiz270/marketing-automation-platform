@@ -127,12 +127,12 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
     }
   };
 
-  // AI service requirements for different functions
+  // AI service requirements for different functions (updated mapping)
   const aiRequirements = {
-    research: ['openai', 'claude'],
-    creative: ['openai', 'dalle', 'midjourney'],
-    copywriting: ['openai', 'claude', 'jasper'],
-    analytics: ['openai', 'claude']
+    research: ['openai', 'claude', 'jasper'],
+    creative: ['openai', 'dalle', 'midjourney', 'claude'],
+    copywriting: ['openai', 'claude', 'jasper', 'copyai', 'writesonic'],
+    analytics: ['openai', 'claude', 'jasper']
   };
 
   const getConnectedAiServices = () => {
@@ -149,12 +149,29 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
 
   const checkAiCapabilities = () => {
     const connected = getConnectedAiServices();
+    console.log('Connected AI services:', connected);
+    console.log('AI connections raw data:', aiConnections);
+    
     const capabilities = {
-      research: connected.some(ai => aiRequirements.research.includes(ai.service)),
-      creative: connected.some(ai => aiRequirements.creative.includes(ai.service)),
-      copywriting: connected.some(ai => aiRequirements.copywriting.includes(ai.service)),
-      analytics: connected.some(ai => aiRequirements.analytics.includes(ai.service))
+      research: connected.some(ai => {
+        console.log(`Checking research: ${ai.service} in`, aiRequirements.research);
+        return aiRequirements.research.includes(ai.service);
+      }),
+      creative: connected.some(ai => {
+        console.log(`Checking creative: ${ai.service} in`, aiRequirements.creative);
+        return aiRequirements.creative.includes(ai.service);
+      }),
+      copywriting: connected.some(ai => {
+        console.log(`Checking copywriting: ${ai.service} in`, aiRequirements.copywriting);
+        return aiRequirements.copywriting.includes(ai.service);
+      }),
+      analytics: connected.some(ai => {
+        console.log(`Checking analytics: ${ai.service} in`, aiRequirements.analytics);
+        return aiRequirements.analytics.includes(ai.service);
+      })
     };
+    
+    console.log('Final capabilities:', capabilities);
     return capabilities;
   };
 
@@ -431,18 +448,31 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
                     <div key={ai.service} style={{
                       display: 'flex',
                       alignItems: 'center',
-                      padding: '8px 16px',
+                      padding: '10px 16px',
                       backgroundColor: ai.enabled !== false ? '#10b981' : '#d1d5db',
                       borderRadius: '20px',
                       color: 'white',
                       fontSize: '14px',
                       fontWeight: '500',
-                      position: 'relative'
+                      position: 'relative',
+                      border: ai.is_default ? '2px solid #fbbf24' : 'none'
                     }}>
-                      <span style={{ marginRight: '6px' }}>
-                        {ai.enabled !== false ? '✓' : '⏸️'}
+                      <span style={{ marginRight: '8px' }}>
+                        {ai.is_default ? '🌟' : (ai.enabled !== false ? '✓' : '⏸️')}
                       </span>
                       {ai.service_name || ai.service.toUpperCase()}
+                      {ai.is_default && (
+                        <span style={{ 
+                          fontSize: '10px', 
+                          marginLeft: '6px',
+                          opacity: '0.9',
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          padding: '2px 6px',
+                          borderRadius: '8px'
+                        }}>
+                          DEFAULT
+                        </span>
+                      )}
                       {ai.enabled === false && (
                         <span style={{ 
                           fontSize: '10px', 
@@ -457,11 +487,23 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
                 </div>
               ) : (
                 <div style={{ textAlign: 'center', padding: '20px' }}>
-                  <p style={{ color: '#64748b', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤖</div>
+                  <p style={{ color: '#64748b', marginBottom: '16px', fontSize: '16px' }}>
                     No AI services connected yet
                   </p>
+                  <p style={{ color: '#9ca3af', marginBottom: '20px', fontSize: '14px' }}>
+                    Connect AI services like OpenAI, Claude, or Jasper to power your campaigns
+                  </p>
                   <button
-                    onClick={() => window.location.href = '#api-connections'}
+                    onClick={() => {
+                      // Trigger parent component navigation to API connections
+                      if (onApiKeysUpdated) {
+                        onApiKeysUpdated();
+                      }
+                      // Try to navigate to API connections section
+                      const event = new CustomEvent('navigate-to-api', { detail: 'api-connections' });
+                      window.dispatchEvent(event);
+                    }}
                     style={{
                       backgroundColor: '#3b82f6',
                       color: 'white',
@@ -470,10 +512,11 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
                       borderRadius: '8px',
                       fontSize: '14px',
                       fontWeight: '600',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
                     }}
                   >
-                    Connect AI Services
+                    🔗 Connect AI Services
                   </button>
                 </div>
               )}
@@ -852,32 +895,340 @@ export default function AdvancedCampaignBuilder({ userId = 'demo_user', globalAp
           </div>
         )}
 
-        {/* Additional steps would continue here... */}
-        {currentStep > 3 && (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ fontSize: '64px', marginBottom: '20px' }}>🚧</div>
-            <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>
-              Step {currentStep} Coming Soon
-            </h3>
-            <p style={{ fontSize: '16px', color: '#64748b', marginBottom: '24px' }}>
-              {steps.find(s => s.id === currentStep)?.description}
-            </p>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
+        {/* Step 4: Audience & Budget */}
+        {currentStep === 4 && (
+          <div>
+            <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
+              <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+                Audience & Budget Configuration
+              </h2>
+              <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+                Define your target audience and allocate budget based on AI insights
+              </p>
+            </div>
+
+            {/* Audience Configuration */}
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px', color: '#1e293b' }}>
+                🎯 Target Audience
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                {[
+                  {
+                    id: 'professionals',
+                    title: '👨‍💼 Working Professionals',
+                    description: 'Career-focused individuals seeking English skills',
+                    demographics: 'Ages 25-45, Mid to senior-level',
+                    size: '~85K in São Paulo',
+                    cpa: 'R$ 42'
+                  },
+                  {
+                    id: 'corporate',
+                    title: '🏢 Corporate Decision Makers',
+                    description: 'HR managers and executives planning team training',
+                    demographics: 'Ages 30-55, Management level',
+                    size: '~12K in São Paulo',
+                    cpa: 'R$ 95'
+                  },
+                  {
+                    id: 'entrepreneurs',
+                    title: '🚀 Entrepreneurs & Business Owners',
+                    description: 'Business leaders expanding internationally',
+                    demographics: 'Ages 28-50, High income',
+                    size: '~8K in São Paulo',
+                    cpa: 'R$ 68'
+                  }
+                ].map(audience => (
+                  <div
+                    key={audience.id}
+                    onClick={() => updateCampaignData('audience', audience.id)}
+                    style={{
+                      border: campaignData.audience === audience.id ? '3px solid #10b981' : '2px solid #e2e8f0',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      cursor: 'pointer',
+                      backgroundColor: campaignData.audience === audience.id ? '#f0fdf4' : 'white',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+                      {audience.title}
+                    </h4>
+                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
+                      {audience.description}
+                    </p>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                      <div>👥 {audience.demographics}</div>
+                      <div>📊 {audience.size}</div>
+                      <div>💰 Target CPA: {audience.cpa}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Budget Allocation */}
+            <div style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '20px', color: '#1e293b' }}>
+                💰 Smart Budget Allocation
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                {[
+                  { platform: 'LinkedIn Ads', percentage: 45, amount: 'R$ 11,250', reason: 'B2B professional targeting' },
+                  { platform: 'Google Ads', percentage: 35, amount: 'R$ 8,750', reason: 'High-intent search traffic' },
+                  { platform: 'Facebook/Instagram', percentage: 20, amount: 'R$ 5,000', reason: 'Brand awareness & retargeting' }
+                ].map((allocation, index) => (
+                  <div key={index} style={{
+                    padding: '20px',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+                      {allocation.platform}
+                    </div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981', marginBottom: '4px' }}>
+                      {allocation.percentage}%
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
+                      {allocation.amount} / month
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                      {allocation.reason}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <button onClick={prevStep} style={{
+                backgroundColor: 'white', color: '#64748b', border: '2px solid #e2e8f0',
+                padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
+              }}>
+                ← Back
+              </button>
               <button
-                onClick={prevStep}
+                onClick={nextStep}
+                disabled={!campaignData.audience}
                 style={{
-                  backgroundColor: 'white',
-                  color: '#64748b',
-                  border: '2px solid #e2e8f0',
-                  padding: '16px 32px',
-                  borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  backgroundColor: campaignData.audience ? '#10b981' : '#9ca3af', color: 'white', border: 'none',
+                  padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: '600',
+                  cursor: campaignData.audience ? 'pointer' : 'not-allowed'
                 }}
               >
+                Generate Creatives →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Creative Strategy */}
+        {currentStep === 5 && (
+          <div>
+            <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎨</div>
+              <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+                AI Creative Strategy
+              </h2>
+              <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+                Generate high-performing ad creatives with AI-powered insights
+              </p>
+            </div>
+
+            {/* Creative Generation */}
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+                {[
+                  {
+                    type: 'Heritage Video',
+                    description: 'Showcase Alumni\'s 60-year legacy and government recognition',
+                    platforms: ['LinkedIn', 'Facebook'],
+                    performance: '+45% CTR vs standard ads'
+                  },
+                  {
+                    type: 'Professional Testimonials',
+                    description: 'Success stories from Alumni corporate graduates',
+                    platforms: ['LinkedIn', 'Google Display'],
+                    performance: '+67% conversion rate'
+                  },
+                  {
+                    type: 'Flexible Learning Demo',
+                    description: 'Interactive showcase of online + in-person options',
+                    platforms: ['Facebook', 'Instagram', 'YouTube'],
+                    performance: '+34% engagement rate'
+                  }
+                ].map((creative, index) => (
+                  <div key={index} style={{
+                    padding: '24px', backgroundColor: 'white', borderRadius: '16px',
+                    border: '2px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  }}>
+                    <h4 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px', color: '#1e293b' }}>
+                      🎬 {creative.type}
+                    </h4>
+                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
+                      {creative.description}
+                    </p>
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                        PLATFORMS:
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {creative.platforms.map(platform => (
+                          <span key={platform} style={{
+                            fontSize: '11px', backgroundColor: '#eff6ff', color: '#1d4ed8',
+                            padding: '4px 8px', borderRadius: '12px', fontWeight: '500'
+                          }}>
+                            {platform}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: '12px', backgroundColor: '#f0fdf4', borderRadius: '8px',
+                      border: '1px solid #bbf7d0'
+                    }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#065f46' }}>
+                        📈 EXPECTED PERFORMANCE:
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#047857' }}>
+                        {creative.performance}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <button onClick={prevStep} style={{
+                backgroundColor: 'white', color: '#64748b', border: '2px solid #e2e8f0',
+                padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
+              }}>
                 ← Back
+              </button>
+              <button onClick={nextStep} style={{
+                backgroundColor: '#10b981', color: 'white', border: 'none',
+                padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
+              }}>
+                Launch Campaign →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 6: Launch & Monitor */}
+        {currentStep === 6 && (
+          <div>
+            <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
+              <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', color: '#1e293b' }}>
+                Launch & Monitor Campaign
+              </h2>
+              <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+                Deploy your AI-optimized campaign with real-time monitoring
+              </p>
+            </div>
+
+            {/* Campaign Summary */}
+            <div style={{ marginBottom: '32px', padding: '24px', backgroundColor: '#f0fdf4', borderRadius: '16px', border: '2px solid #bbf7d0' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color: '#065f46' }}>
+                ✅ Campaign Ready for Launch
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '14px', color: '#047857', fontWeight: '600' }}>OBJECTIVE</div>
+                  <div style={{ fontSize: '16px', color: '#065f46' }}>
+                    {campaignData.objective === 'enrollment' ? '🎓 Student Enrollment' :
+                     campaignData.objective === 'awareness' ? '📢 Brand Awareness' : 
+                     '💼 Corporate Partnerships'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', color: '#047857', fontWeight: '600' }}>TARGET AUDIENCE</div>
+                  <div style={{ fontSize: '16px', color: '#065f46' }}>
+                    {campaignData.audience === 'professionals' ? '👨‍💼 Working Professionals' :
+                     campaignData.audience === 'corporate' ? '🏢 Corporate Decision Makers' :
+                     '🚀 Entrepreneurs'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', color: '#047857', fontWeight: '600' }}>BUDGET</div>
+                  <div style={{ fontSize: '16px', color: '#065f46' }}>{campaignData.budget || 'Not set'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', color: '#047857', fontWeight: '600' }}>AI SERVICES</div>
+                  <div style={{ fontSize: '16px', color: '#065f46' }}>{getConnectedAiServices().length} Connected</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Launch Actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+              <button style={{
+                padding: '24px', backgroundColor: '#10b981', color: 'white', border: 'none',
+                borderRadius: '16px', fontSize: '18px', fontWeight: '700', cursor: 'pointer',
+                textAlign: 'left', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚀</div>
+                <div>Launch Campaign Now</div>
+                <div style={{ fontSize: '14px', opacity: '0.9', fontWeight: '400' }}>
+                  Deploy across all selected platforms
+                </div>
+              </button>
+              
+              <button style={{
+                padding: '24px', backgroundColor: '#3b82f6', color: 'white', border: 'none',
+                borderRadius: '16px', fontSize: '18px', fontWeight: '700', cursor: 'pointer',
+                textAlign: 'left', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
+                <div>Preview & Test</div>
+                <div style={{ fontSize: '14px', opacity: '0.9', fontWeight: '400' }}>
+                  Run A/B tests before full launch
+                </div>
+              </button>
+              
+              <button style={{
+                padding: '24px', backgroundColor: '#8b5cf6', color: 'white', border: 'none',
+                borderRadius: '16px', fontSize: '18px', fontWeight: '700', cursor: 'pointer',
+                textAlign: 'left', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>⚡</div>
+                <div>Auto-Optimization</div>
+                <div style={{ fontSize: '14px', opacity: '0.9', fontWeight: '400' }}>
+                  Enable AI-powered optimization
+                </div>
+              </button>
+            </div>
+
+            {/* Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <button onClick={prevStep} style={{
+                backgroundColor: 'white', color: '#64748b', border: '2px solid #e2e8f0',
+                padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer'
+              }}>
+                ← Back
+              </button>
+              <button
+                onClick={() => {
+                  alert('🎉 Campaign launched successfully! Monitor performance in the Performance Monitor section.');
+                  // Navigate back to dashboard or performance monitor
+                  const event = new CustomEvent('navigate-to-api', { detail: 'performance-monitor' });
+                  window.dispatchEvent(event);
+                }}
+                style={{
+                  backgroundColor: '#10b981', color: 'white', border: 'none',
+                  padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                🎉 Complete Campaign
               </button>
             </div>
           </div>
