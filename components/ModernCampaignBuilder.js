@@ -13,6 +13,13 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [showApproval, setShowApproval] = useState(false);
   const [currentGeneration, setCurrentGeneration] = useState(null);
   const [showProjectManager, setShowProjectManager] = useState(false);
+  const [showContentViewer, setShowContentViewer] = useState(false);
+  const [contentViewerData, setContentViewerData] = useState(null);
+  const [generationPrompts, setGenerationPrompts] = useState({});
+  const [editedContent, setEditedContent] = useState('');
+  const [editedPrompt, setEditedPrompt] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
 
   const steps = [
     { 
@@ -171,8 +178,20 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       const data = await response.json();
       
       if (data.success) {
-        setCurrentGeneration(data.result);
-        setShowApproval(true);
+        // Store the generated content
+        setStepData(prev => ({
+          ...prev,
+          [stepId]: data.result
+        }));
+        
+        // Open content viewer directly
+        setContentViewerData({
+          stepId: stepId,
+          stepInfo: steps.find(s => s.id === stepId),
+          content: data.result,
+          prompt: generationPrompts[stepId] || ''
+        });
+        setShowContentViewer(true);
       } else {
         alert(`Error: ${data.error || 'Generation failed'}`);
       }
@@ -195,6 +214,95 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
     // Auto-advance to next step
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const openContentViewer = (stepId) => {
+    const content = stepData[stepId];
+    const prompt = generationPrompts[stepId] || '';
+    
+    setContentViewerData({
+      stepId: stepId,
+      stepInfo: steps.find(s => s.id === stepId),
+      content: content,
+      prompt: prompt
+    });
+    
+    // Initialize editing states
+    setEditedContent(content);
+    setEditedPrompt(prompt);
+    setIsEditing(false);
+    setIsEditingPrompt(false);
+    setShowContentViewer(true);
+  };
+
+  const handleContentEdit = (stepId, newContent) => {
+    setStepData(prev => ({
+      ...prev,
+      [stepId]: newContent
+    }));
+  };
+
+  const handlePromptEdit = (stepId, newPrompt) => {
+    setGenerationPrompts(prev => ({
+      ...prev,
+      [stepId]: newPrompt
+    }));
+  };
+
+  const regenerateWithPrompt = async (stepId, customPrompt) => {
+    setLoading(true);
+    setShowContentViewer(false);
+    
+    try {
+      const endpoints = {
+        1: '/api/ai/strategy-translator',
+        2: '/api/ai/media-planner', 
+        3: '/api/ai/copy-generator',
+        4: '/api/ai/creative-generator',
+        5: '/api/ai/campaign-structurer',
+        6: '/api/ai/campaign-publisher',
+        7: '/api/ai/performance-analyzer'
+      };
+      
+      const response = await fetch(endpoints[stepId], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyData: selectedCompany,
+          projectData: selectedProject,
+          previousSteps: stepData,
+          connectedAIs: connectedAIs.map(ai => ai.service),
+          customPrompt: customPrompt
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setStepData(prev => ({
+          ...prev,
+          [stepId]: data.result
+        }));
+        setGenerationPrompts(prev => ({
+          ...prev,
+          [stepId]: customPrompt
+        }));
+        setContentViewerData({
+          stepId: stepId,
+          stepInfo: steps.find(s => s.id === stepId),
+          content: data.result,
+          prompt: customPrompt
+        });
+        setShowContentViewer(true);
+      } else {
+        alert(`Error: ${data.error || 'Generation failed'}`);
+      }
+    } catch (error) {
+      console.error(`Error regenerating step ${stepId}:`, error);
+      alert('Error generating content. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -324,6 +432,144 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
     </div>
   );
 
+  const renderContentViewer = () => {
+    if (!contentViewerData) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+        >
+          {/* Header */}
+          <div className={`bg-gradient-to-r ${contentViewerData.stepInfo.color} p-6 text-white rounded-t-2xl`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <span className="text-3xl">{contentViewerData.stepInfo.icon}</span>
+                <div>
+                  <h2 className="text-2xl font-bold">Generated Content</h2>
+                  <p className="text-sm opacity-90">{contentViewerData.stepInfo.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowContentViewer(false)}
+                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* Content Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Generated Content</h3>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isEditing ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {isEditing ? 'Save Changes' : 'Edit Content'}
+                </button>
+              </div>
+              
+              {isEditing ? (
+                <textarea
+                  value={typeof editedContent === 'string' ? editedContent : JSON.stringify(editedContent, null, 2)}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  placeholder="Edit your content here..."
+                />
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-6 max-h-64 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-gray-700 text-sm">
+                    {typeof editedContent === 'string' ? editedContent : JSON.stringify(editedContent, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Prompt Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Generation Prompt</h3>
+                <button
+                  onClick={() => setIsEditingPrompt(!isEditingPrompt)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isEditingPrompt ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {isEditingPrompt ? 'Save Prompt' : 'Edit Prompt'}
+                </button>
+              </div>
+              
+              {isEditingPrompt ? (
+                <textarea
+                  value={editedPrompt}
+                  onChange={(e) => setEditedPrompt(e.target.value)}
+                  className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter custom prompt for regeneration..."
+                />
+              ) : (
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-blue-800 text-sm">
+                    {editedPrompt || 'Default AI prompt was used for this generation.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-4 border-t">
+              <button
+                onClick={() => {
+                  if (isEditing) {
+                    handleContentEdit(contentViewerData.stepId, editedContent);
+                    setIsEditing(false);
+                  }
+                  if (isEditingPrompt) {
+                    handlePromptEdit(contentViewerData.stepId, editedPrompt);
+                    setIsEditingPrompt(false);
+                  }
+                  setShowContentViewer(false);
+                }}
+                className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+              >
+                ✓ Approve & Continue
+              </button>
+              
+              <button
+                onClick={() => regenerateWithPrompt(contentViewerData.stepId, editedPrompt)}
+                disabled={loading}
+                className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              >
+                🔄 Regenerate
+              </button>
+              
+              <button
+                onClick={() => regenerateWithPrompt(contentViewerData.stepId, '')}
+                disabled={loading}
+                className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 disabled:opacity-50 transition-colors"
+              >
+                ✨ Generate Again
+              </button>
+              
+              <button
+                onClick={() => setShowContentViewer(false)}
+                className="border border-gray-300 text-gray-700 px-4 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
   const renderApprovalScreen = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <motion.div
@@ -432,22 +678,30 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
               </div>
               
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-2">Generated Results:</h4>
-                <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
+                <h4 className="font-semibold text-gray-800 mb-2">Generated Results Preview:</h4>
+                <div className="text-sm text-gray-600 max-h-20 overflow-hidden">
                   {typeof stepData[step.id] === 'string' ? (
-                    <p>{stepData[step.id]}</p>
+                    <p className="truncate">{stepData[step.id].substring(0, 150)}...</p>
                   ) : (
-                    <pre className="whitespace-pre-wrap">{JSON.stringify(stepData[step.id], null, 2)}</pre>
+                    <p className="truncate">Generated content available (Object/JSON format)</p>
                   )}
                 </div>
               </div>
               
-              <button
-                onClick={() => processStep(step.id)}
-                className="px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 text-sm"
-              >
-                Regenerate Content
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => openContentViewer(step.id)}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium"
+                >
+                  📖 Open Results
+                </button>
+                <button
+                  onClick={() => processStep(step.id)}
+                  className="px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 text-sm"
+                >
+                  🔄 Regenerate
+                </button>
+              </div>
             </div>
           ) : isCurrent ? (
             <div className="text-center py-6">
@@ -522,6 +776,11 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       {/* Approval Modal */}
       <AnimatePresence>
         {showApproval && renderApprovalScreen()}
+      </AnimatePresence>
+
+      {/* Content Viewer Modal */}
+      <AnimatePresence>
+        {showContentViewer && renderContentViewer()}
       </AnimatePresence>
 
       {/* Project Manager Modal */}
