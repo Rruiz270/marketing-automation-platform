@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ModernCampaignBuilder = ({ connectedAIs }) => {
+const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [companies, setCompanies] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -77,7 +77,6 @@ const ModernCampaignBuilder = ({ connectedAIs }) => {
 
   const loadCompanies = async () => {
     try {
-      // Get all companies (we'll need to create an endpoint to list all companies)
       const response = await fetch('/api/company-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +87,10 @@ const ModernCampaignBuilder = ({ connectedAIs }) => {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Loaded companies:', data);
         setCompanies(data.companies || []);
+      } else {
+        console.error('Failed to load companies:', response.status);
       }
     } catch (error) {
       console.error('Error loading companies:', error);
@@ -202,17 +204,32 @@ const ModernCampaignBuilder = ({ connectedAIs }) => {
       <div className="bg-white rounded-xl p-6 shadow-sm border">
         <h3 className="text-lg font-semibold mb-4">1. Select Company</h3>
         {companies.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🏢</span>
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-3xl">🏢</span>
             </div>
-            <p className="text-gray-600 mb-4">No companies found. Please create a company profile first.</p>
-            <button 
-              onClick={() => window.location.href = '#onboarding'}
-              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              Create Company Profile
-            </button>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">No Company Profiles Found</h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              To create campaigns, you need at least one company profile. 
+              Set up your first company profile to get started.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate('onboarding');
+                  } else {
+                    alert('Please go to Company Setup first to create a company profile.');
+                  }
+                }}
+                className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
+              >
+                Create Company Profile
+              </button>
+              <p className="text-sm text-gray-500">
+                You can also navigate to "Company Setup" in the sidebar
+              </p>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

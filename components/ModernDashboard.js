@@ -166,7 +166,10 @@ const ModernDashboard = () => {
       case 'advertising-platforms':
         return <AdvertisingPlatforms onUpdate={() => checkUserProgress()} />;
       case 'campaign-wizard':
-        return <ModernCampaignBuilder connectedAIs={connectedAIs} />;
+        return <ModernCampaignBuilder 
+          connectedAIs={connectedAIs} 
+          onNavigate={setCurrentView}
+        />;
       case 'performance':
         return <PerformanceCenter />;
       case 'automation':
