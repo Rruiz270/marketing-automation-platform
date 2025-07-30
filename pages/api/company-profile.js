@@ -30,12 +30,21 @@ function loadStoredProfiles() {
       const data = fs.readFileSync(STORAGE_FILE, 'utf8');
       const fileData = JSON.parse(data);
       memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded company profiles from file:', Object.keys(memoryStorage).length);
+      console.log('✅ Loaded company profiles from file:', Object.keys(memoryStorage).length);
     } else {
-      console.log('No existing company profiles file found');
+      console.log('⚠️ No existing company profiles file found - creating new storage');
+      // Create empty file to ensure it exists
+      fs.writeFileSync(STORAGE_FILE, JSON.stringify({}, null, 2));
     }
   } catch (error) {
-    console.error('Error loading company profiles:', error);
+    console.error('❌ Error loading company profiles:', error);
+    // Try to create backup storage
+    try {
+      fs.writeFileSync(STORAGE_FILE, JSON.stringify({}, null, 2));
+      console.log('✅ Created new empty storage file');
+    } catch (backupError) {
+      console.error('❌ Failed to create backup storage:', backupError);
+    }
   }
   
   return memoryStorage;
@@ -47,10 +56,34 @@ function saveStoredProfiles(profiles) {
   
   try {
     ensureStorageDir();
+    
+    // Create backup first
+    const backupFile = STORAGE_FILE.replace('.json', '_backup.json');
+    if (fs.existsSync(STORAGE_FILE)) {
+      fs.copyFileSync(STORAGE_FILE, backupFile);
+    }
+    
+    // Write new data
     fs.writeFileSync(STORAGE_FILE, JSON.stringify(profiles, null, 2));
-    console.log('Saved company profiles to file:', Object.keys(profiles).length, 'profiles');
+    console.log('✅ Saved company profiles to file:', Object.keys(profiles).length, 'profiles');
+    
+    // Also save to timestamped backup
+    const localBackup = path.join(STORAGE_DIR, `profiles_${Date.now()}.json`);
+    fs.writeFileSync(localBackup, JSON.stringify(profiles, null, 2));
+    
   } catch (error) {
-    console.error('Error saving company profiles:', error);
+    console.error('❌ Error saving company profiles:', error);
+    
+    // Try to restore from backup
+    const backupFile = STORAGE_FILE.replace('.json', '_backup.json');
+    if (fs.existsSync(backupFile)) {
+      try {
+        fs.copyFileSync(backupFile, STORAGE_FILE);
+        console.log('✅ Restored from backup');
+      } catch (restoreError) {
+        console.error('❌ Failed to restore from backup:', restoreError);
+      }
+    }
   }
 }
 
