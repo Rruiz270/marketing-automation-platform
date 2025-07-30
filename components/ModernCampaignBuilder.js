@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ProjectManager from './ProjectManager';
 
 const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -11,6 +12,7 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [stepData, setStepData] = useState({});
   const [showApproval, setShowApproval] = useState(false);
   const [currentGeneration, setCurrentGeneration] = useState(null);
+  const [showProjectManager, setShowProjectManager] = useState(false);
 
   const steps = [
     { 
@@ -125,6 +127,15 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project);
+  };
+
+  const handleProjectCreated = (newProject) => {
+    // Refresh projects list
+    loadProjects(selectedCompany.user_id);
+    // Close the modal
+    setShowProjectManager(false);
+    // Optionally auto-select the new project
+    setSelectedProject(newProject);
   };
 
   const processStep = async (stepId) => {
@@ -258,7 +269,7 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">2. Select Project</h3>
             <button 
-              onClick={() => {/* Open new project modal */}}
+              onClick={() => setShowProjectManager(true)}
               className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
             >
               + New Project
@@ -269,7 +280,7 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
             <div className="text-center py-6">
               <p className="text-gray-600 mb-4">No projects found for {selectedCompany.companyName}</p>
               <button 
-                onClick={() => {/* Create first project */}}
+                onClick={() => setShowProjectManager(true)}
                 className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
               >
                 Create First Project
@@ -512,6 +523,15 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       <AnimatePresence>
         {showApproval && renderApprovalScreen()}
       </AnimatePresence>
+
+      {/* Project Manager Modal */}
+      {showProjectManager && selectedCompany && (
+        <ProjectManager
+          company={selectedCompany}
+          onClose={() => setShowProjectManager(false)}
+          onProjectCreated={handleProjectCreated}
+        />
+      )}
     </div>
   );
 };
