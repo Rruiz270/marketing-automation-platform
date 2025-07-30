@@ -2,18 +2,37 @@
 const fs = require('fs');
 const path = require('path');
 
-// In-memory storage with file persistence
+// In-memory storage with persistent data structure
 let memoryStorage = {};
-const STORAGE_FILE = path.join('/tmp', 'company-profiles.json');
+
+// Use environment variable for storage path or default to a persistent location
+const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
+const STORAGE_FILE = path.join(STORAGE_DIR, 'company-profiles.json');
+
+// Ensure storage directory exists
+function ensureStorageDir() {
+  try {
+    if (!fs.existsSync(STORAGE_DIR)) {
+      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+      console.log('Created storage directory:', STORAGE_DIR);
+    }
+  } catch (error) {
+    console.error('Error creating storage directory:', error);
+  }
+}
 
 // Load stored profiles
 function loadStoredProfiles() {
   try {
+    ensureStorageDir();
+    
     if (fs.existsSync(STORAGE_FILE)) {
       const data = fs.readFileSync(STORAGE_FILE, 'utf8');
       const fileData = JSON.parse(data);
       memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded company profiles from file');
+      console.log('Loaded company profiles from file:', Object.keys(memoryStorage).length);
+    } else {
+      console.log('No existing company profiles file found');
     }
   } catch (error) {
     console.error('Error loading company profiles:', error);
@@ -27,8 +46,9 @@ function saveStoredProfiles(profiles) {
   memoryStorage = profiles;
   
   try {
+    ensureStorageDir();
     fs.writeFileSync(STORAGE_FILE, JSON.stringify(profiles, null, 2));
-    console.log('Saved company profiles to file');
+    console.log('Saved company profiles to file:', Object.keys(profiles).length, 'profiles');
   } catch (error) {
     console.error('Error saving company profiles:', error);
   }

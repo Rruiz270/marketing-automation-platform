@@ -6,31 +6,61 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { objective, budget, audience, companyProfile, ai_service, ai_service_name } = req.body;
+  // Handle both old and new parameter formats
+  const { 
+    objective, 
+    budget, 
+    audience, 
+    companyProfile,
+    companyData,
+    projectData,
+    previousSteps,
+    connectedAIs,
+    customPrompt,
+    ai_service, 
+    ai_service_name 
+  } = req.body;
+
+  // Use new format if available, fall back to old format
+  const company = companyData || companyProfile;
+  const project = projectData;
+  const campaignObjective = objective || project?.objectives || 'lead_generation';
+  const campaignBudget = budget || project?.budget || company?.monthlyBudget || '10000';
+  const targetAudience = audience || project?.targetAudience || company?.targetPublic || 'General audience';
 
   try {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY || 'demo-key'
     });
 
-    const strategyPrompt = `
+    const basePrompt = customPrompt || `
 As an expert digital marketing strategist, translate the following business objectives into a comprehensive paid media strategy.
 
 Company Profile:
-- Name: ${companyProfile?.companyName || 'Company'}
-- Industry: ${companyProfile?.industry || 'Business'}
-- Target Market: ${companyProfile?.targetPublic || audience}
-- Location: ${companyProfile?.geolocation || 'Brazil'}
-- Products: ${companyProfile?.products?.map(p => p.name).join(', ') || 'Various'}
-- Average Ticket: R$ ${companyProfile?.generalAverageTicket || '500'}
-- Monthly Budget: R$ ${companyProfile?.monthlyBudget || budget}
-- Competitors: ${companyProfile?.competitors?.filter(c => c).join(', ') || 'Multiple'}
-- Differentials: ${companyProfile?.differentials || 'Quality and service'}
+- Name: ${company?.companyName || 'Company'}
+- Industry: ${company?.industry || 'Business'}
+- Target Market: ${company?.targetPublic || targetAudience}
+- Location: ${company?.geolocation || 'Brazil'}
+- Products: ${company?.products?.map(p => p.name).join(', ') || 'Various'}
+- Average Ticket: R$ ${company?.generalAverageTicket || '500'}
+- Monthly Budget: R$ ${company?.monthlyBudget || campaignBudget}
+- Competitors: ${company?.competitors?.filter(c => c).join(', ') || 'Multiple'}
+- Differentials: ${company?.differentials || 'Quality and service'}
+
+Project Details:
+- Name: ${project?.name || 'Campaign Project'}
+- Description: ${project?.description || 'Marketing campaign'}
+- Target Audience: ${project?.targetAudience || targetAudience}
+- Platforms: ${project?.platforms?.join(', ') || 'Google Ads, Facebook Ads'}
+- Budget: R$ ${project?.budget || campaignBudget}
+- Objectives: ${project?.objectives || campaignObjective}
 
 Campaign Details:
-- Objective: ${objective}
-- Budget: R$ ${budget}
-- Target Audience: ${audience}
+- Objective: ${campaignObjective}
+- Budget: R$ ${campaignBudget}
+- Target Audience: ${targetAudience}`;
+
+    const strategyPrompt = basePrompt + `
 
 Based on this information, create a tactical paid media strategy that includes:
 
@@ -90,30 +120,34 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
       
       // Parse the strategy into structured data
       strategy = {
-        objective,
-        budget,
+        objective: campaignObjective,
+        budget: campaignBudget,
+        company: company?.companyName || 'Company',
+        project: project?.name || 'Campaign',
+        fullText: strategyText,
         primaryChannel: extractPrimaryChannel(strategyText),
-        channelMix: extractChannelMix(strategyText, budget),
+        channelMix: extractChannelMix(strategyText, campaignBudget),
         funnelStrategy: extractFunnelStrategy(strategyText),
         audienceSegments: extractAudienceSegments(strategyText),
-        kpis: extractKPIs(strategyText, objective),
-        expectedROAS: calculateExpectedROAS(objective, budget),
-        targetCPA: calculateTargetCPA(companyProfile, objective, budget),
-        timeline: generateTimeline(objective),
+        kpis: extractKPIs(strategyText, campaignObjective),
+        expectedROAS: calculateExpectedROAS(campaignObjective, campaignBudget),
+        targetCPA: calculateTargetCPA(company, campaignObjective, campaignBudget),
+        timeline: generateTimeline(campaignObjective),
         tactics: extractTactics(strategyText),
         ai_generated: true,
-        ai_service_used: ai_service_name || 'OpenAI GPT-4'
+        ai_service_used: ai_service_name || connectedAIs?.[0] || 'OpenAI GPT-4',
+        generated_at: new Date().toISOString()
       };
 
     } catch (aiError) {
       console.error('AI API error:', aiError);
       // Generate fallback strategy
-      strategy = generateFallbackStrategy(objective, budget, audience, companyProfile);
+      strategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
     }
 
     res.status(200).json({
       success: true,
-      strategy,
+      result: strategy,
       metadata: {
         generated_at: new Date().toISOString(),
         ai_service: ai_service_name || 'Default AI',
@@ -126,7 +160,7 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
     res.status(500).json({ 
       success: false,
       error: 'Strategy generation failed',
-      fallback_strategy: generateFallbackStrategy(objective, budget, audience, companyProfile)
+      result: generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project)
     });
   }
 }
@@ -324,10 +358,13 @@ function extractTactics(strategyText) {
   };
 }
 
-function generateFallbackStrategy(objective, budget, audience, companyProfile) {
+function generateFallbackStrategy(objective, budget, audience, company, project) {
   return {
     objective,
     budget,
+    company: company?.companyName || 'Company',
+    project: project?.name || 'Campaign',
+    fullText: `FALLBACK STRATEGY for ${company?.companyName || 'Company'}\n\nA comprehensive digital marketing strategy focusing on ${objective} with a budget of R$ ${budget}.\n\nKey elements:\n- Primary channel: Google Ads for high-intent traffic\n- Secondary channels: Facebook/Instagram for broader reach\n- Target audience: ${audience}\n- Expected ROAS: 4.0x\n- Timeline: 6-8 weeks for optimization`,
     primaryChannel: 'Google Ads',
     channelMix: {
       'Google Ads': 50,
@@ -335,16 +372,16 @@ function generateFallbackStrategy(objective, budget, audience, companyProfile) {
       'LinkedIn': 15
     },
     funnelStrategy: {
-      awareness: { budget_allocation: 20 },
-      consideration: { budget_allocation: 35 },
-      conversion: { budget_allocation: 35 },
-      retention: { budget_allocation: 10 }
+      awareness: { budget_allocation: 20, tactics: ['Display campaigns', 'Video ads'] },
+      consideration: { budget_allocation: 35, tactics: ['Retargeting', 'Interest targeting'] },
+      conversion: { budget_allocation: 35, tactics: ['Search ads', 'Shopping campaigns'] },
+      retention: { budget_allocation: 10, tactics: ['Customer match', 'Loyalty campaigns'] }
     },
     audienceSegments: {
-      primary: [{ name: 'Target Audience', description: audience }],
-      secondary: [],
-      lookalike: ['Website visitors'],
-      exclusions: ['Current customers']
+      primary: [{ name: 'Target Audience', description: audience, priority: 'High' }],
+      secondary: [{ name: 'Lookalike Audience', description: 'Similar to existing customers', priority: 'Medium' }],
+      lookalike: ['Website visitors', 'Current customers'],
+      exclusions: ['Recent customers', 'Competitors']
     },
     kpis: {
       primary: ['Cost per Result', 'ROAS', 'Conversion Rate'],
@@ -355,11 +392,13 @@ function generateFallbackStrategy(objective, budget, audience, companyProfile) {
     targetCPA: 50,
     timeline: '6-8 weeks for full optimization',
     tactics: {
-      creative: ['Test multiple variations'],
-      targeting: ['Start broad, then narrow'],
-      bidding: ['Automated bidding recommended'],
-      optimization: ['Weekly optimization cycles']
+      creative: ['Test multiple ad copy variations', 'Use dynamic creative optimization'],
+      targeting: ['Start broad, then narrow based on performance', 'Layer demographics with interests'],
+      bidding: ['Start with Target CPA', 'Test Maximize Conversions'],
+      optimization: ['Weekly performance reviews', 'Bi-weekly bid adjustments']
     },
-    ai_generated: false
+    ai_generated: false,
+    ai_service_used: 'Fallback Generator',
+    generated_at: new Date().toISOString()
   };
 }

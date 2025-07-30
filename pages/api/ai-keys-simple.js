@@ -96,30 +96,43 @@ const AI_SERVICES = {
   }
 };
 
-// In-memory storage with persistence simulation for serverless
-// Since /tmp is ephemeral in serverless, we'll use a combination approach
+// Persistent storage for AI keys
 let memoryStorage = {};
 
-// For demo purposes, we'll also try to persist to temp file when possible
 const fs = require('fs');
 const path = require('path');
-const STORAGE_FILE = path.join('/tmp', 'ai-keys-storage.json');
+
+// Use environment variable for storage path or default to a persistent location
+const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
+const STORAGE_FILE = path.join(STORAGE_DIR, 'ai-keys-storage.json');
+
+// Ensure storage directory exists
+function ensureStorageDir() {
+  try {
+    if (!fs.existsSync(STORAGE_DIR)) {
+      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+      console.log('Created AI keys storage directory:', STORAGE_DIR);
+    }
+  } catch (error) {
+    console.error('Error creating AI keys storage directory:', error);
+  }
+}
 
 // Load stored keys with fallback
 function loadStoredKeys() {
   try {
-    // First try to load from file if it exists
+    ensureStorageDir();
+    
     if (fs.existsSync(STORAGE_FILE)) {
       const data = fs.readFileSync(STORAGE_FILE, 'utf8');
       const fileData = JSON.parse(data);
-      // Merge with memory storage
       memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded from file and merged with memory storage');
+      console.log('Loaded AI keys from file storage:', Object.keys(memoryStorage).length);
     } else {
-      console.log('No file storage found, using memory storage only');
+      console.log('No existing AI keys file found');
     }
   } catch (error) {
-    console.error('Error loading from file storage:', error);
+    console.error('Error loading AI keys:', error);
   }
   
   return memoryStorage;
@@ -127,15 +140,14 @@ function loadStoredKeys() {
 
 // Save keys with dual storage
 function saveStoredKeys(keys) {
-  // Always save to memory
   memoryStorage = keys;
   
   try {
-    // Try to save to file as backup
+    ensureStorageDir();
     fs.writeFileSync(STORAGE_FILE, JSON.stringify(keys, null, 2));
-    console.log('Saved to both memory and file storage');
+    console.log('Saved AI keys to file storage:', Object.keys(keys).length, 'users');
   } catch (error) {
-    console.error('Error saving to file storage, using memory only:', error);
+    console.error('Error saving AI keys:', error);
   }
 }
 

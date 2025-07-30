@@ -4,18 +4,38 @@ const path = require('path');
 
 // Storage
 let memoryStorage = {};
-const STORAGE_FILE = path.join('/tmp', 'company-projects.json');
+
+// Use environment variable for storage path or default to a persistent location
+const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
+const STORAGE_FILE = path.join(STORAGE_DIR, 'company-projects.json');
+
+// Ensure storage directory exists
+function ensureStorageDir() {
+  try {
+    if (!fs.existsSync(STORAGE_DIR)) {
+      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+      console.log('Created projects storage directory:', STORAGE_DIR);
+    }
+  } catch (error) {
+    console.error('Error creating projects storage directory:', error);
+  }
+}
 
 // Load stored projects
 function loadStoredProjects() {
   try {
+    ensureStorageDir();
+    
     if (fs.existsSync(STORAGE_FILE)) {
       const data = fs.readFileSync(STORAGE_FILE, 'utf8');
       const fileData = JSON.parse(data);
       memoryStorage = { ...memoryStorage, ...fileData };
+      console.log('Loaded company projects from file:', Object.keys(memoryStorage).length);
+    } else {
+      console.log('No existing projects file found');
     }
   } catch (error) {
-    console.error('Error loading projects:', error);
+    console.error('Error loading company projects:', error);
   }
   return memoryStorage;
 }
@@ -24,9 +44,11 @@ function loadStoredProjects() {
 function saveStoredProjects(projects) {
   memoryStorage = projects;
   try {
+    ensureStorageDir();
     fs.writeFileSync(STORAGE_FILE, JSON.stringify(projects, null, 2));
+    console.log('Saved company projects to file:', Object.keys(projects).length, 'companies');
   } catch (error) {
-    console.error('Error saving projects:', error);
+    console.error('Error saving company projects:', error);
   }
 }
 
