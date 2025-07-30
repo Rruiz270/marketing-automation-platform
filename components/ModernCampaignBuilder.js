@@ -171,7 +171,8 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
           companyData: selectedCompany,
           projectData: selectedProject,
           previousSteps: stepData,
-          connectedAIs: connectedAIs.map(ai => ai.service)
+          connectedAIs: connectedAIs,
+          userId: 'default_user'
         })
       });
       

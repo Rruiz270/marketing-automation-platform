@@ -20,6 +20,13 @@ export default async function handler(req, res) {
     ai_service, 
     ai_service_name 
   } = req.body;
+  
+  console.log('Strategy Translator API called with:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    connectedAIs: connectedAIs,
+    customPrompt: !!customPrompt
+  });
 
   // Use new format if available, fall back to old format
   const company = companyData || companyProfile;
@@ -34,37 +41,42 @@ export default async function handler(req, res) {
     
     // Try to get user's connected API key
     if (connectedAIs && connectedAIs.length > 0) {
-      // Load user's AI keys
-      const fs = require('fs');
-      const path = require('path');
-      const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
-      const STORAGE_FILE = path.join(STORAGE_DIR, 'ai-keys-storage.json');
+      console.log('Connected AIs received:', connectedAIs);
       
-      try {
-        if (fs.existsSync(STORAGE_FILE)) {
-          const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-          const keysData = JSON.parse(data);
-          const userKeys = keysData['default_user'];
-          
-          if (userKeys) {
-            // Find OpenAI key or first available text AI key
-            const openaiKey = userKeys.find(k => k.service === 'openai');
-            const claudeKey = userKeys.find(k => k.service === 'claude');
-            const anyTextKey = userKeys.find(k => ['openai', 'claude', 'jasper', 'cohere'].includes(k.service));
+      // Check if we have OpenAI in the connected services
+      const openaiService = connectedAIs.find(ai => 
+        ai.service === 'openai' || 
+        ai.service_name === 'OpenAI GPT-4' ||
+        (ai.api_key && ai.api_key.startsWith('sk-'))
+      );
+      
+      if (openaiService && openaiService.api_key) {
+        apiKey = openaiService.api_key;
+        console.log('Using OpenAI key from connected services');
+      } else {
+        // Try loading from storage as fallback
+        const fs = require('fs');
+        const path = require('path');
+        const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
+        const STORAGE_FILE = path.join(STORAGE_DIR, 'ai-keys-storage.json');
+        
+        try {
+          if (fs.existsSync(STORAGE_FILE)) {
+            const data = fs.readFileSync(STORAGE_FILE, 'utf8');
+            const keysData = JSON.parse(data);
+            const userKeys = keysData['default_user'];
             
-            if (openaiKey) {
-              apiKey = openaiKey.api_key;
-              console.log('Using user OpenAI key');
-            } else if (claudeKey && !apiKey) {
-              // For now, still use OpenAI SDK but with fallback message
-              console.log('User has Claude key but using fallback - OpenAI required');
-            } else if (anyTextKey) {
-              console.log('Found text AI key:', anyTextKey.service);
+            if (userKeys) {
+              const openaiKey = userKeys.find(k => k.service === 'openai');
+              if (openaiKey) {
+                apiKey = openaiKey.api_key;
+                console.log('Using OpenAI key from storage');
+              }
             }
           }
+        } catch (error) {
+          console.error('Error loading user keys from storage:', error);
         }
-      } catch (error) {
-        console.error('Error loading user keys:', error);
       }
     }
     
@@ -72,6 +84,8 @@ export default async function handler(req, res) {
       console.log('No valid API key found, using fallback strategy');
       throw new Error('No valid API key configured');
     }
+    
+    console.log('Initializing OpenAI with key starting with:', apiKey.substring(0, 7) + '...');
     
     const openai = new OpenAI({
       apiKey: apiKey
@@ -154,7 +168,7 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: strategyPrompt }],
         max_tokens: 2000,
         temperature: 0.7
@@ -184,9 +198,16 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
       };
 
     } catch (aiError) {
-      console.error('AI API error:', aiError);
-      // Generate fallback strategy
+      console.error('AI API error details:', {
+        message: aiError.message,
+        status: aiError.status,
+        code: aiError.code,
+        type: aiError.type
+      });
+      
+      // Generate fallback strategy with error info
       strategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
+      strategy.error_reason = aiError.message || 'AI generation failed';
     }
 
     res.status(200).json({
