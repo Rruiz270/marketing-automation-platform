@@ -30,18 +30,26 @@ const ModernDashboard = () => {
       const companyData = await companyRes.json();
       
       // Check AI connections
-      const aiRes = await fetch('/api/ai-keys-simple');
+      const aiRes = await fetch('/api/ai-keys-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_user_keys',
+          user_id: 'default_user'
+        })
+      });
       const aiData = await aiRes.json();
+      console.log('Dashboard AI data:', aiData);
       
       setUserProgress({
         companySetup: companyData.success && companyData.data?.companyName,
-        aiConnected: aiData.success && aiData.keys?.length > 0,
+        aiConnected: aiData.success && aiData.data?.length > 0,
         campaignsCreated: 0, // TODO: Get from campaigns API
-        isOnboarded: companyData.success && aiData.success
+        isOnboarded: companyData.success && (aiData.success && aiData.data?.length > 0)
       });
       
       if (aiData.success) {
-        setConnectedAIs(aiData.keys || []);
+        setConnectedAIs(aiData.data || []);
       }
     } catch (error) {
       console.error('Error checking progress:', error);
@@ -76,7 +84,7 @@ const ModernDashboard = () => {
             {userProgress.aiConnected ? '✓' : '2'}
           </div>
           <span className={userProgress.aiConnected ? 'text-green-600 font-medium' : 'text-gray-600'}>
-            AI Services Connected ({connectedAIs.length})
+            AI Services Connected{userProgress.aiConnected ? ` (${connectedAIs.length})` : ''}
           </span>
         </div>
         <div className="flex items-center space-x-3">
@@ -147,9 +155,14 @@ const ModernDashboard = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'onboarding':
-        return <CompanyOnboarding onComplete={() => checkUserProgress()} />;
+        return <CompanyOnboarding onComplete={() => {
+          checkUserProgress();
+          setCurrentView('overview');
+        }} />;
       case 'ai-hub':
-        return <AIConnectionHub onUpdate={() => checkUserProgress()} />;
+        return <AIConnectionHub onUpdate={() => {
+          setTimeout(() => checkUserProgress(), 500); // Give API time to save
+        }} />;
       case 'advertising-platforms':
         return <AdvertisingPlatforms onUpdate={() => checkUserProgress()} />;
       case 'campaign-wizard':
@@ -282,7 +295,7 @@ const ModernDashboard = () => {
             </div>
             {connectedAIs.length > 0 && (
               <div className="text-xs text-gray-500">
-                {connectedAIs.map(ai => ai.service).join(', ')}
+                {connectedAIs.map(ai => ai.service_name || ai.service).join(', ')}
               </div>
             )}
           </div>

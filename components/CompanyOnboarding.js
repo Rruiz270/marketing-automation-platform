@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
 const CompanyOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [existingProfile, setExistingProfile] = useState(null);
+  const [viewMode, setViewMode] = useState('loading'); // 'loading', 'existing', 'new', 'edit'
   const [formData, setFormData] = useState({
     // Basic Info
     companyName: '',
@@ -31,6 +33,37 @@ const CompanyOnboarding = ({ onComplete }) => {
     marketingObjectives: '',
     challenges: ''
   });
+
+  // Load existing profile on mount
+  useEffect(() => {
+    loadExistingProfile();
+  }, []);
+
+  const loadExistingProfile = async () => {
+    try {
+      const response = await fetch('/api/company-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get',
+          user_id: 'default_user'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setExistingProfile(data.data);
+        setFormData(data.data);
+        setViewMode('existing');
+      } else {
+        setViewMode('new');
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      setViewMode('new');
+    }
+  };
 
   const steps = [
     { number: 1, title: 'Company Basics', icon: '🏢', description: 'Tell us about your business' },
@@ -82,14 +115,24 @@ const CompanyOnboarding = ({ onComplete }) => {
       const response = await fetch('/api/company-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          action: 'save',
+          user_id: 'default_user',
+          data: formData
+        })
       });
       
-      if (response.ok) {
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Company profile saved successfully!');
         onComplete();
+      } else {
+        alert(`Error: ${result.error || 'Failed to save profile'}`);
       }
     } catch (error) {
       console.error('Error saving company profile:', error);
+      alert('Error saving profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -370,6 +413,98 @@ const CompanyOnboarding = ({ onComplete }) => {
     }
   };
 
+  // If loading
+  if (viewMode === 'loading') {
+    return (
+      <div className="max-w-4xl mx-auto text-center py-12">
+        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading company profile...</p>
+      </div>
+    );
+  }
+
+  // If existing profile found
+  if (viewMode === 'existing' && existingProfile) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">{existingProfile.companyName}</h2>
+              <p className="text-gray-600">{existingProfile.industry} • {existingProfile.geolocation}</p>
+            </div>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => {
+                  setViewMode('edit');
+                  setCurrentStep(1);
+                }}
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
+              >
+                Edit Profile
+              </button>
+              <button
+                onClick={() => {
+                  setFormData({
+                    companyName: '',
+                    industry: '',
+                    companySize: '',
+                    website: '',
+                    targetPublic: '',
+                    geolocation: '',
+                    demographics: '',
+                    products: [{ name: '', description: '', averageTicket: '' }],
+                    competitors: ['', '', ''],
+                    differentials: '',
+                    currentChannels: [],
+                    currentCAC: '',
+                    expectedCAC: '',
+                    monthlyBudget: '',
+                    marketingObjectives: '',
+                    challenges: ''
+                  });
+                  setViewMode('new');
+                  setCurrentStep(1);
+                }}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Create New Profile
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-700 mb-2">Target Market</h4>
+              <p className="text-gray-600">{existingProfile.targetPublic}</p>
+              <p className="text-sm text-gray-500 mt-1">{existingProfile.demographics}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-700 mb-2">Marketing Budget</h4>
+              <p className="text-2xl font-bold text-gray-900">{existingProfile.monthlyBudget}</p>
+              <p className="text-sm text-gray-500">Current CAC: {existingProfile.currentCAC} → Target: {existingProfile.expectedCAC}</p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-blue-900 mb-2">Marketing Objectives</h4>
+            <p className="text-blue-800">{existingProfile.marketingObjectives}</p>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              onClick={onComplete}
+              className="px-8 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold"
+            >
+              Continue with this Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Form view (new or edit)
   return (
     <div className="max-w-4xl mx-auto">
       {/* Progress Bar */}
