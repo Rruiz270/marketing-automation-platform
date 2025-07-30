@@ -188,6 +188,7 @@ const ModernDashboard = () => {
             <div className="text-center py-8">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">
                 Alumni AI Marketing Platform
+                <span className="text-sm bg-blue-500 text-white px-2 py-1 rounded ml-3">DESENVOLVIMENTO ATIVO 🚀</span>
               </h1>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                 Create, optimize, and scale your marketing campaigns with AI-powered automation
