@@ -84,7 +84,17 @@ export default async function handler(req, res) {
     
     if (!apiKey || apiKey === 'demo-key') {
       console.log('No valid API key found, using fallback strategy');
-      throw new Error('No valid API key configured');
+      const fallbackStrategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
+      return res.status(200).json({
+        success: false,
+        error: 'No valid OpenAI API key configured',
+        details: {
+          error_type: 'Missing API Key',
+          connected_ais_available: connectedAIs?.length || 0,
+          storage_checked: true
+        },
+        result: fallbackStrategy
+      });
     }
     
     console.log('Initializing OpenAI with key starting with:', apiKey.substring(0, 7) + '...');
@@ -169,6 +179,7 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
     let strategy;
 
     try {
+      console.log('Making OpenAI API call with model: gpt-3.5-turbo');
       const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: strategyPrompt }],
@@ -176,6 +187,7 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
         temperature: 0.7
       });
 
+      console.log('OpenAI API call successful, processing response...');
       const strategyText = response.choices[0].message.content;
       
       // Parse the strategy into structured data
