@@ -25,7 +25,9 @@ export default async function handler(req, res) {
     hasCompanyData: !!companyData,
     hasProjectData: !!projectData,
     connectedAIs: connectedAIs,
-    customPrompt: !!customPrompt
+    connectedAIsCount: connectedAIs?.length || 0,
+    customPrompt: !!customPrompt,
+    fullRequest: req.body
   });
 
   // Use new format if available, fall back to old format
