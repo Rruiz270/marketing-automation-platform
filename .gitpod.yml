@@ -1,0 +1,14 @@
+tasks:
+  - name: Setup and Start
+    init: npm install
+    command: npm run dev
+    
+ports:
+  - port: 3000
+    onOpen: open-preview
+    visibility: public
+    
+vscode:
+  extensions:
+    - esbenp.prettier-vscode
+    - dbaeumer.vscode-eslint

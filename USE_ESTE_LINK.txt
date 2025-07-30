@@ -1,0 +1,27 @@
+IMPORTANTE: O Lovable pode estar bloqueando localhost!
+
+USE ESTE LINK NO SEU NAVEGADOR:
+================================
+
+http://127.0.0.1:5555
+
+NÃO USE "localhost" - USE O IP "127.0.0.1"
+
+ALTERNATIVAS:
+============
+1. http://127.0.0.1:5555
+2. http://[::1]:5555
+3. Abra em modo incógnito/privado
+
+SE NADA FUNCIONAR:
+==================
+1. Desative temporariamente extensões do navegador
+2. Tente outro navegador (Firefox, Safari, etc)
+3. Use o Vercel em modo preview:
+   - git push origin development
+   - Acesse a URL de preview gerada
+
+SERVIDOR ESTÁ RODANDO!
+======================
+O servidor Next.js está funcionando perfeitamente.
+O problema é apenas o acesso do navegador.
