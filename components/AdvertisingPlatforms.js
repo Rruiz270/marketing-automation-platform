@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import OAuthPopup from './OAuthPopup';
 
 const AdvertisingPlatforms = ({ onUpdate }) => {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [testingPlatform, setTestingPlatform] = useState(null);
+  const [oauthPopupOpen, setOauthPopupOpen] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState(null);
 
   const platforms = [
     {
@@ -114,27 +117,47 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
     }
   };
 
-  const handleConnect = async (platformId) => {
+  const handleConnectClick = (platformId) => {
+    setSelectedPlatform(platformId);
+    setOauthPopupOpen(true);
+  };
+
+  const handleConnect = async (platformId, credentials) => {
     setLoading(true);
     setTestingPlatform(platformId);
     
     try {
-      // For demo purposes, simulate OAuth flow
-      setTimeout(() => {
+      const response = await fetch('/api/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: platformId,
+          credentials,
+          user_id: 'default_user'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
         const newConnection = {
           platform: platformId,
           status: 'connected',
           connected_at: new Date().toISOString(),
-          account_name: `Demo ${platforms.find(p => p.id === platformId)?.name} Account`
+          account_name: data.account_name || `${platforms.find(p => p.id === platformId)?.name} Account`,
+          ...data.connection_data
         };
         
         setConnections(prev => [...prev.filter(c => c.platform !== platformId), newConnection]);
         onUpdate && onUpdate();
-        setLoading(false);
-        setTestingPlatform(null);
-      }, 2000);
+        alert(`${platforms.find(p => p.id === platformId)?.name} connected successfully!`);
+      } else {
+        alert(`Error connecting: ${data.error || 'Connection failed'}`);
+      }
     } catch (error) {
       console.error('Error connecting platform:', error);
+      alert('Error connecting platform. Please check your credentials.');
+    } finally {
       setLoading(false);
       setTestingPlatform(null);
     }
@@ -267,7 +290,7 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
                       </p>
                       
                       <button
-                        onClick={() => handleConnect(platform.id)}
+                        onClick={() => handleConnectClick(platform.id)}
                         disabled={loading || testing}
                         className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
                           testing 
@@ -352,6 +375,17 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
           </div>
         </div>
       </div>
+      
+      {/* OAuth Popup */}
+      <OAuthPopup
+        platform={selectedPlatform}
+        isOpen={oauthPopupOpen}
+        onClose={() => {
+          setOauthPopupOpen(false);
+          setSelectedPlatform(null);
+        }}
+        onConnect={handleConnect}
+      />
     </div>
   );
 };

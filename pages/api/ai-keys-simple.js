@@ -389,8 +389,9 @@ async function testApiKey(service, apiKey) {
     switch (service) {
       case 'openai':
       case 'dalle':
-        if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
-          return { valid: false, error: 'Invalid OpenAI API key format' };
+        // OpenAI keys can start with sk-proj- or just sk-
+        if ((!apiKey.startsWith('sk-') && !apiKey.startsWith('sk-proj-')) || apiKey.length < 20) {
+          return { valid: false, error: 'Invalid OpenAI API key format. Should start with sk- or sk-proj-' };
         }
         break;
       case 'claude':

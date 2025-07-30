@@ -157,6 +157,7 @@ const AIConnectionHub = ({ onUpdate }) => {
         })
       });
       const data = await response.json();
+      console.log('AI Keys loaded:', data);
       if (data.success) {
         setConnections(data.data || []);
       }
@@ -184,12 +185,17 @@ const AIConnectionHub = ({ onUpdate }) => {
       });
       
       const data = await response.json();
+      console.log('Connect response:', data);
       
       if (data.success) {
         await loadConnections();
         onUpdate();
         // Clear the input
         document.getElementById(`${serviceId}-key`).value = '';
+        // Show success message
+        alert(`${data.message || 'AI service connected successfully!'}`);
+      } else {
+        alert(`Error: ${data.error || data.message || 'Failed to connect AI service'}`);
       }
     } catch (error) {
       console.error('Error connecting service:', error);
