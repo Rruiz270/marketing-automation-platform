@@ -194,11 +194,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         });
         setShowContentViewer(true);
       } else {
-        alert(`Error: ${data.error || 'Generation failed'}`);
+        console.error('API Error Details:', data);
+        alert(`Error: ${data.error || 'Generation failed'}\n\nDetails: ${JSON.stringify(data, null, 2)}`);
       }
     } catch (error) {
       console.error(`Error processing step ${stepId}:`, error);
-      alert('Error generating content. Please try again.');
+      alert(`Network Error: ${error.message}\n\nPlease check:\n- AI connection is active\n- API keys are valid\n- Internet connection`);
     } finally {
       setLoading(false);
     }
@@ -273,7 +274,7 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
           companyData: selectedCompany,
           projectData: selectedProject,
           previousSteps: stepData,
-          connectedAIs: connectedAIs.map(ai => ai.service),
+          connectedAIs: connectedAIs,
           customPrompt: customPrompt
         })
       });
