@@ -29,8 +29,52 @@ export default async function handler(req, res) {
   const targetAudience = audience || project?.targetAudience || company?.targetPublic || 'General audience';
 
   try {
+    // Get user's API key
+    let apiKey = process.env.OPENAI_API_KEY;
+    
+    // Try to get user's connected API key
+    if (connectedAIs && connectedAIs.length > 0) {
+      // Load user's AI keys
+      const fs = require('fs');
+      const path = require('path');
+      const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
+      const STORAGE_FILE = path.join(STORAGE_DIR, 'ai-keys-storage.json');
+      
+      try {
+        if (fs.existsSync(STORAGE_FILE)) {
+          const data = fs.readFileSync(STORAGE_FILE, 'utf8');
+          const keysData = JSON.parse(data);
+          const userKeys = keysData['default_user'];
+          
+          if (userKeys) {
+            // Find OpenAI key or first available text AI key
+            const openaiKey = userKeys.find(k => k.service === 'openai');
+            const claudeKey = userKeys.find(k => k.service === 'claude');
+            const anyTextKey = userKeys.find(k => ['openai', 'claude', 'jasper', 'cohere'].includes(k.service));
+            
+            if (openaiKey) {
+              apiKey = openaiKey.api_key;
+              console.log('Using user OpenAI key');
+            } else if (claudeKey && !apiKey) {
+              // For now, still use OpenAI SDK but with fallback message
+              console.log('User has Claude key but using fallback - OpenAI required');
+            } else if (anyTextKey) {
+              console.log('Found text AI key:', anyTextKey.service);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user keys:', error);
+      }
+    }
+    
+    if (!apiKey || apiKey === 'demo-key') {
+      console.log('No valid API key found, using fallback strategy');
+      throw new Error('No valid API key configured');
+    }
+    
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || 'demo-key'
+      apiKey: apiKey
     });
 
     const basePrompt = customPrompt || `

@@ -450,6 +450,13 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
                 <div>
                   <h2 className="text-2xl font-bold">Generated Content</h2>
                   <p className="text-sm opacity-90">{contentViewerData.stepInfo.title}</p>
+                  {contentViewerData.content && (
+                    <p className="text-xs opacity-75 mt-1">
+                      {contentViewerData.content.ai_generated 
+                        ? `✓ AI Generated with ${contentViewerData.content.ai_service_used || 'AI Service'}`
+                        : '⚠️ Fallback Strategy (Connect OpenAI for AI generation)'}
+                    </p>
+                  )}
                 </div>
               </div>
               <button
@@ -484,10 +491,51 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
                   placeholder="Edit your content here..."
                 />
               ) : (
-                <div className="bg-gray-50 rounded-lg p-6 max-h-64 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-gray-700 text-sm">
-                    {typeof editedContent === 'string' ? editedContent : JSON.stringify(editedContent, null, 2)}
-                  </pre>
+                <div className="bg-gray-50 rounded-lg p-6 max-h-96 overflow-y-auto">
+                  {contentViewerData.stepId === 1 && editedContent.fullText ? (
+                    // Special rendering for strategy step
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-2">Strategy Overview</h4>
+                        <p className="text-gray-700 whitespace-pre-line">{editedContent.fullText}</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h5 className="font-medium text-gray-700">Primary Channel</h5>
+                          <p className="text-gray-600">{editedContent.primaryChannel}</p>
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-gray-700">Expected ROAS</h5>
+                          <p className="text-gray-600">{editedContent.expectedROAS}x</p>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-gray-700 mb-2">Channel Mix</h5>
+                        <div className="space-y-1">
+                          {Object.entries(editedContent.channelMix || {}).map(([channel, percentage]) => (
+                            <div key={channel} className="flex justify-between text-sm">
+                              <span>{channel}</span>
+                              <span className="font-medium">{percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <details className="cursor-pointer">
+                        <summary className="font-medium text-gray-700">View Full JSON Data</summary>
+                        <pre className="mt-2 text-xs overflow-x-auto">
+                          {JSON.stringify(editedContent, null, 2)}
+                        </pre>
+                      </details>
+                    </div>
+                  ) : (
+                    // Default rendering for other steps
+                    <pre className="whitespace-pre-wrap text-gray-700 text-sm">
+                      {typeof editedContent === 'string' ? editedContent : JSON.stringify(editedContent, null, 2)}
+                    </pre>
+                  )}
                 </div>
               )}
             </div>
@@ -535,6 +583,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
                     setIsEditingPrompt(false);
                   }
                   setShowContentViewer(false);
+                  
+                  // Auto-advance to next step after approval
+                  const nextStep = contentViewerData.stepId + 1;
+                  if (nextStep <= 7) {
+                    setCurrentStep(nextStep);
+                  }
                 }}
                 className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
               >
