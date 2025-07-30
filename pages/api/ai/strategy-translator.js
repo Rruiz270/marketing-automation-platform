@@ -204,12 +204,15 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
         message: aiError.message,
         status: aiError.status,
         code: aiError.code,
-        type: aiError.type
+        type: aiError.type,
+        response: aiError.response?.data,
+        hasApiKey: !!apiKey,
+        apiKeyStart: apiKey ? apiKey.substring(0, 7) + '...' : 'none'
       });
       
       // Generate fallback strategy with error info
       strategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
-      strategy.error_reason = aiError.message || 'AI generation failed';
+      strategy.error_reason = `AI generation failed: ${aiError.message}. API Key: ${apiKey ? 'Present' : 'Missing'}`;
     }
 
     res.status(200).json({
@@ -224,10 +227,17 @@ Return a comprehensive strategy that maximizes ROI while achieving the stated ob
 
   } catch (error) {
     console.error('Strategy translation error:', error);
+    const fallbackStrategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
     res.status(500).json({ 
       success: false,
-      error: 'Strategy generation failed',
-      result: generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project)
+      error: `Strategy generation failed: ${error.message}`,
+      details: {
+        error_type: error.name,
+        error_message: error.message,
+        has_api_key: !!apiKey,
+        connected_ais_count: connectedAIs?.length || 0
+      },
+      result: fallbackStrategy
     });
   }
 }
