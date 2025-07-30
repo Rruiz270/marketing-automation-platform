@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ProjectManager from './ProjectManager';
 
 const CompanyOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [existingProfile, setExistingProfile] = useState(null);
   const [viewMode, setViewMode] = useState('loading'); // 'loading', 'existing', 'new', 'edit'
+  const [showProjectManager, setShowProjectManager] = useState(false);
   const [formData, setFormData] = useState({
     // Basic Info
     companyName: '',
@@ -435,6 +437,12 @@ const CompanyOnboarding = ({ onComplete }) => {
             </div>
             <div className="flex space-x-4">
               <button
+                onClick={() => setShowProjectManager(true)}
+                className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-medium"
+              >
+                Manage Projects
+              </button>
+              <button
                 onClick={() => {
                   setViewMode('edit');
                   setCurrentStep(1);
@@ -575,6 +583,18 @@ const CompanyOnboarding = ({ onComplete }) => {
           </button>
         )}
       </div>
+      
+      {/* Project Manager Modal */}
+      {showProjectManager && existingProfile && (
+        <ProjectManager
+          company={existingProfile}
+          onClose={() => setShowProjectManager(false)}
+          onProjectCreated={() => {
+            // Optionally refresh or show success message
+            console.log('Project created successfully');
+          }}
+        />
+      )}
     </div>
   );
 };

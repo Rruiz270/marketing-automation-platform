@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CompanyOnboarding from './CompanyOnboarding';
 import AIConnectionHub from './AIConnectionHub';
 import AdvertisingPlatforms from './AdvertisingPlatforms';
-import CampaignWizard from './CampaignWizard';
+import ModernCampaignBuilder from './ModernCampaignBuilder';
 import PerformanceCenter from './PerformanceCenter';
 
 const ModernDashboard = () => {
@@ -62,9 +62,9 @@ const ModernDashboard = () => {
     { id: 'onboarding', label: 'Company Setup', icon: '🏢', description: 'Business profile setup', required: !userProgress.companySetup },
     { id: 'ai-hub', label: 'AI Connections', icon: '🤖', description: 'Connect AI services (13 available)', required: !userProgress.aiConnected },
     { id: 'advertising-platforms', label: 'Ad Platforms', icon: '📱', description: 'Google, Facebook, LinkedIn & more' },
-    { id: 'campaign-wizard', label: 'Campaign Builder', icon: '🎯', description: '7-step AI campaign creation' },
-    { id: 'performance', label: 'Performance', icon: '📊', description: 'Analytics & insights', disabled: !userProgress.isOnboarded },
-    { id: 'automation', label: 'Automation', icon: '⚡', description: 'Smart optimization', disabled: !userProgress.isOnboarded }
+    { id: 'campaign-wizard', label: 'Campaign Builder', icon: '🎯', description: '8-step AI campaign creation' },
+    { id: 'performance', label: 'Performance', icon: '📊', description: 'Analytics & insights' },
+    { id: 'automation', label: 'Automation', icon: '⚡', description: 'Smart optimization' }
   ];
 
   const ProgressIndicator = () => (
@@ -166,7 +166,7 @@ const ModernDashboard = () => {
       case 'advertising-platforms':
         return <AdvertisingPlatforms onUpdate={() => checkUserProgress()} />;
       case 'campaign-wizard':
-        return <CampaignWizard connectedAIs={connectedAIs} />;
+        return <ModernCampaignBuilder connectedAIs={connectedAIs} />;
       case 'performance':
         return <PerformanceCenter />;
       case 'automation':

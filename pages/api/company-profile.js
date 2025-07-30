@@ -126,6 +126,14 @@ export default async function handler(req, res) {
           insights
         });
 
+      case 'list_all':
+        const allCompanies = Object.values(storedProfiles);
+        
+        return res.status(200).json({
+          success: true,
+          companies: allCompanies
+        });
+
       default:
         return res.status(400).json({ error: 'Invalid action' });
     }

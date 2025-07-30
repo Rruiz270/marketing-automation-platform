@@ -1,0 +1,502 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const ModernCampaignBuilder = ({ connectedAIs }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [companies, setCompanies] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [stepData, setStepData] = useState({});
+  const [showApproval, setShowApproval] = useState(false);
+  const [currentGeneration, setCurrentGeneration] = useState(null);
+
+  const steps = [
+    { 
+      id: 0, 
+      title: 'Project Selection', 
+      icon: '🏢', 
+      description: 'Choose company and project for campaign',
+      color: 'from-gray-500 to-gray-600'
+    },
+    { 
+      id: 1, 
+      title: 'Strategy Translation', 
+      icon: '🎯', 
+      description: 'AI translates business objectives into marketing strategy',
+      color: 'from-blue-500 to-blue-600'
+    },
+    { 
+      id: 2, 
+      title: 'Media Planning', 
+      icon: '📊', 
+      description: 'AI-optimized channel selection and budget allocation',
+      color: 'from-green-500 to-green-600'
+    },
+    { 
+      id: 3, 
+      title: 'Copy Creation', 
+      icon: '✍️', 
+      description: 'Generate high-converting copy for each channel',
+      color: 'from-purple-500 to-purple-600'
+    },
+    { 
+      id: 4, 
+      title: 'Creative Design', 
+      icon: '🎨', 
+      description: 'AI-generated visuals and creative assets',
+      color: 'from-pink-500 to-pink-600'
+    },
+    { 
+      id: 5, 
+      title: 'Campaign Structure', 
+      icon: '🏗️', 
+      description: 'Organize campaigns, ad groups, and targeting',
+      color: 'from-orange-500 to-orange-600'
+    },
+    { 
+      id: 6, 
+      title: 'Platform Setup', 
+      icon: '🚀', 
+      description: 'Deploy to advertising platforms',
+      color: 'from-red-500 to-red-600'
+    },
+    { 
+      id: 7, 
+      title: 'Performance Tracking', 
+      icon: '📈', 
+      description: 'AI-powered insights and optimization',
+      color: 'from-indigo-500 to-indigo-600'
+    }
+  ];
+
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    try {
+      // Get all companies (we'll need to create an endpoint to list all companies)
+      const response = await fetch('/api/company-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list_all'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data.companies || []);
+      }
+    } catch (error) {
+      console.error('Error loading companies:', error);
+    }
+  };
+
+  const loadProjects = async (companyId) => {
+    try {
+      const response = await fetch('/api/company-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list',
+          company_id: companyId
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setProjects(data.projects || []);
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  };
+
+  const handleCompanySelect = (company) => {
+    setSelectedCompany(company);
+    loadProjects(company.user_id);
+    setSelectedProject(null);
+  };
+
+  const handleProjectSelect = (project) => {
+    setSelectedProject(project);
+  };
+
+  const processStep = async (stepId) => {
+    if (!selectedCompany || !selectedProject) {
+      alert('Please select a company and project first');
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const endpoints = {
+        1: '/api/ai/strategy-translator',
+        2: '/api/ai/media-planner', 
+        3: '/api/ai/copy-generator',
+        4: '/api/ai/creative-generator',
+        5: '/api/ai/campaign-structurer',
+        6: '/api/ai/campaign-publisher',
+        7: '/api/ai/performance-analyzer'
+      };
+      
+      const response = await fetch(endpoints[stepId], {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyData: selectedCompany,
+          projectData: selectedProject,
+          previousSteps: stepData,
+          connectedAIs: connectedAIs.map(ai => ai.service)
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setCurrentGeneration(data.result);
+        setShowApproval(true);
+      } else {
+        alert(`Error: ${data.error || 'Generation failed'}`);
+      }
+    } catch (error) {
+      console.error(`Error processing step ${stepId}:`, error);
+      alert('Error generating content. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveGeneration = () => {
+    setStepData(prev => ({
+      ...prev,
+      [currentStep]: currentGeneration
+    }));
+    setShowApproval(false);
+    setCurrentGeneration(null);
+    
+    // Auto-advance to next step
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const rejectGeneration = () => {
+    setShowApproval(false);
+    setCurrentGeneration(null);
+    // User can try again or modify parameters
+  };
+
+  const renderProjectSelection = () => (
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">Select Company & Project</h2>
+        <p className="text-gray-600">Choose the company and project for your campaign</p>
+      </div>
+
+      {/* Company Selection */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border">
+        <h3 className="text-lg font-semibold mb-4">1. Select Company</h3>
+        {companies.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🏢</span>
+            </div>
+            <p className="text-gray-600 mb-4">No companies found. Please create a company profile first.</p>
+            <button 
+              onClick={() => window.location.href = '#onboarding'}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            >
+              Create Company Profile
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {companies.map(company => (
+              <div
+                key={company.user_id}
+                onClick={() => handleCompanySelect(company)}
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                  selectedCompany?.user_id === company.user_id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <h4 className="font-semibold">{company.companyName}</h4>
+                <p className="text-sm text-gray-600">{company.industry} • {company.geolocation}</p>
+                <p className="text-xs text-gray-500 mt-1">Budget: {company.monthlyBudget}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Project Selection */}
+      {selectedCompany && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">2. Select Project</h3>
+            <button 
+              onClick={() => {/* Open new project modal */}}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+            >
+              + New Project
+            </button>
+          </div>
+          
+          {projects.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-gray-600 mb-4">No projects found for {selectedCompany.companyName}</p>
+              <button 
+                onClick={() => {/* Create first project */}}
+                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
+              >
+                Create First Project
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {projects.map(project => (
+                <div
+                  key={project.id}
+                  onClick={() => handleProjectSelect(project)}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    selectedProject?.id === project.id
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <h4 className="font-semibold">{project.name}</h4>
+                  <p className="text-sm text-gray-600">{project.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Audience: {project.targetAudience} • Budget: {project.budget}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Continue Button */}
+      {selectedCompany && selectedProject && (
+        <div className="text-center">
+          <button
+            onClick={() => setCurrentStep(1)}
+            className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
+          >
+            Start Campaign Creation →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderApprovalScreen = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+      >
+        <div className={`bg-gradient-to-r ${steps[currentStep].color} p-6 text-white rounded-t-2xl`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <span className="text-3xl">{steps[currentStep].icon}</span>
+              <div>
+                <h2 className="text-2xl font-bold">Review & Approve</h2>
+                <p className="text-sm opacity-90">{steps[currentStep].title}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <h3 className="font-semibold text-gray-800 mb-4">Generated Content:</h3>
+            <div className="whitespace-pre-wrap text-gray-700">
+              {typeof currentGeneration === 'string' 
+                ? currentGeneration 
+                : JSON.stringify(currentGeneration, null, 2)
+              }
+            </div>
+          </div>
+
+          <div className="flex space-x-4">
+            <button
+              onClick={approveGeneration}
+              className="flex-1 bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600"
+            >
+              ✓ Approve & Continue
+            </button>
+            <button
+              onClick={rejectGeneration}
+              className="flex-1 border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50"
+            >
+              ✗ Regenerate
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  const renderStepContent = (step) => {
+    const isCompleted = !!stepData[step.id];
+    const isCurrent = currentStep === step.id;
+    const isLoading = loading && isCurrent;
+
+    if (step.id === 0) return null; // Skip project selection in main steps
+
+    return (
+      <motion.div
+        key={step.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 mb-6 ${
+          isCurrent 
+            ? 'border-blue-500 shadow-xl' 
+            : isCompleted 
+              ? 'border-green-500' 
+              : 'border-gray-200'
+        }`}
+      >
+        {/* Header */}
+        <div className={`bg-gradient-to-r ${step.color} p-6 text-white rounded-t-2xl`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="text-4xl">{step.icon}</div>
+              <div>
+                <h3 className="text-xl font-bold">Step {step.id}: {step.title}</h3>
+                <p className="text-sm opacity-90">{step.description}</p>
+              </div>
+            </div>
+            
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${
+              isCompleted 
+                ? 'bg-green-500' 
+                : isCurrent 
+                  ? 'bg-yellow-500' 
+                  : 'bg-white bg-opacity-20'
+            }`}>
+              {isLoading ? (
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : isCompleted ? (
+                '✓'
+              ) : (
+                step.id
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {isCompleted ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg">
+                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">✓</div>
+                <span className="text-green-700 font-medium">Step completed and approved</span>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 mb-2">Generated Results:</h4>
+                <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
+                  {typeof stepData[step.id] === 'string' ? (
+                    <p>{stepData[step.id]}</p>
+                  ) : (
+                    <pre className="whitespace-pre-wrap">{JSON.stringify(stepData[step.id], null, 2)}</pre>
+                  )}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => processStep(step.id)}
+                className="px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 text-sm"
+              >
+                Regenerate Content
+              </button>
+            </div>
+          ) : isCurrent ? (
+            <div className="text-center py-6">
+              <p className="text-gray-600 mb-4">Ready to generate {step.title.toLowerCase()} with AI</p>
+              <button
+                onClick={() => processStep(step.id)}
+                disabled={connectedAIs.length === 0 || loading}
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {connectedAIs.length === 0 ? 'Connect AI Services First' : `Generate ${step.title}`}
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-gray-400">Complete previous steps to unlock</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {currentStep === 0 ? (
+        renderProjectSelection()
+      ) : (
+        <>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              AI Campaign Builder
+            </h1>
+            <p className="text-xl text-gray-600">
+              Creating campaign for <strong>{selectedCompany?.companyName}</strong> → <strong>{selectedProject?.name}</strong>
+            </p>
+            
+            {/* Progress Bar */}
+            <div className="mt-6 bg-white rounded-xl p-4 shadow-sm border">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Campaign Progress</span>
+                <span className="text-sm text-gray-500">
+                  {Object.keys(stepData).length} of 7 steps completed
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${(Object.keys(stepData).length / 7) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Campaign Steps */}
+          <div className="space-y-6">
+            {steps.slice(1).map((step) => renderStepContent(step))}
+          </div>
+
+          {/* Back to Project Selection */}
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setCurrentStep(0)}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              ← Back to Project Selection
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Approval Modal */}
+      <AnimatePresence>
+        {showApproval && renderApprovalScreen()}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default ModernCampaignBuilder;
