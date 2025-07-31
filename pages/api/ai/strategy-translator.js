@@ -54,6 +54,12 @@ export default async function handler(req, res) {
     let apiKey = null;
     
     // Source 1: Environment variable
+    console.log('🔍 Checking environment variable:', {
+      exists: !!process.env.OPENAI_API_KEY,
+      startsWithSk: process.env.OPENAI_API_KEY?.startsWith('sk-'),
+      length: process.env.OPENAI_API_KEY?.length
+    });
+    
     if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
       apiKey = process.env.OPENAI_API_KEY;
       console.log('✅ Using environment variable API key');
