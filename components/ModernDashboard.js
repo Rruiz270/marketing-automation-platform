@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { emergencyRecoverCompanyData } from '../lib/emergency-backup.js';
 
 // Import all components
 import CompanyOnboarding from './CompanyOnboarding';
@@ -25,9 +26,22 @@ const ModernDashboard = () => {
 
   const checkUserProgress = async () => {
     try {
-      // Check company setup
-      const companyRes = await fetch('/api/company-profile');
-      const companyData = await companyRes.json();
+      // EMERGENCY RECOVERY FIRST - Check for backed up company data
+      console.log('🚨 Dashboard: Checking for emergency company data...');
+      const emergencyCompanyData = await emergencyRecoverCompanyData('default_user');
+      let companyData;
+      
+      if (emergencyCompanyData) {
+        console.log('🚨 Dashboard: Emergency company data recovered!');
+        companyData = {
+          success: true,
+          data: emergencyCompanyData
+        };
+      } else {
+        // Check company setup via API
+        const companyRes = await fetch('/api/company-profile');
+        companyData = await companyRes.json();
+      }
       
       // Check AI connections
       const aiRes = await fetch('/api/ai-keys-simple', {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProjectManager from './ProjectManager';
+import { emergencyRecoverCompanyData } from '../lib/emergency-backup.js';
 
 const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -86,6 +87,23 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
   const loadCompanies = async () => {
     try {
+      // EMERGENCY RECOVERY FIRST - Check for backed up company data
+      console.log('🚨 Campaign Builder: Checking for emergency company data...');
+      const emergencyCompanyData = await emergencyRecoverCompanyData('default_user');
+      if (emergencyCompanyData) {
+        console.log('🚨 Campaign Builder: Emergency company data recovered!');
+        const mockCompany = {
+          user_id: 'default_user',
+          companyName: emergencyCompanyData.companyName,
+          industry: emergencyCompanyData.industry,
+          ...emergencyCompanyData
+        };
+        setCompanies([mockCompany]);
+        // Auto-select the recovered company
+        setSelectedCompany(mockCompany);
+        return;
+      }
+
       const response = await fetch('/api/company-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
