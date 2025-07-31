@@ -39,14 +39,44 @@ export default async function handler(req, res) {
   const targetAudience = audience || project?.targetAudience || company?.targetPublic || 'General audience';
 
   try {
-    // Use bulletproof API key manager
-    console.log('🔑 Using bulletproof API key manager...');
-    const apiKey = apiKeyManager.getApiKey(connectedAIs);
-    const keyInfo = apiKeyManager.getKeyInfo(connectedAIs);
+    // EMERGENCY DIRECT API KEY - Multiple sources
+    let apiKey = null;
     
-    console.log('API Key Manager Info:', keyInfo);
+    // Source 1: Environment variable
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
+      apiKey = process.env.OPENAI_API_KEY;
+      console.log('✅ Using environment variable API key');
+    }
     
-    if (!apiKey || !apiKeyManager.isValidApiKey(apiKey)) {
+    // Source 2: Alternative environment variables
+    if (!apiKey) {
+      const altKeys = [
+        process.env.OPENAI_KEY,
+        process.env.OPENAI_API_KEY_BACKUP,
+        process.env.EMERGENCY_OPENAI_KEY
+      ];
+      
+      for (const altKey of altKeys) {
+        if (altKey && altKey.startsWith('sk-')) {
+          apiKey = altKey;
+          console.log('✅ Using alternative environment variable API key');
+          break;
+        }
+      }
+    }
+    
+    // Source 3: Connected AIs
+    if (!apiKey && connectedAIs && connectedAIs.length > 0) {
+      const openaiService = connectedAIs.find(ai => 
+        ai.service === 'openai' && ai.api_key && ai.api_key.startsWith('sk-')
+      );
+      if (openaiService) {
+        apiKey = openaiService.api_key;
+        console.log('✅ Using connected AI API key');
+      }
+    }
+    
+    if (!apiKey || !apiKey.startsWith('sk-')) {
       console.log('❌ No valid API key found from any source');
       const fallbackStrategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
       return res.status(200).json({
@@ -54,7 +84,7 @@ export default async function handler(req, res) {
         error: 'No valid OpenAI API key configured',
         details: {
           error_type: 'Missing API Key',
-          keyInfo: keyInfo,
+          env_key: !!process.env.OPENAI_API_KEY,
           connected_ais_available: connectedAIs?.length || 0
         },
         result: fallbackStrategy
