@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProjectManager from './ProjectManager';
-import { emergencyRecoverCompanyData } from '../lib/emergency-backup.js';
+import { 
+  emergencyRecoverCompanyData, 
+  emergencyRecoverProjectData, 
+  emergencyBackupProjectData,
+  getDefaultProjectsData 
+} from '../lib/emergency-backup.js';
 
 const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -126,6 +131,16 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
   const loadProjects = async (companyId) => {
     try {
+      // EMERGENCY RECOVERY FIRST - Check for backed up projects
+      console.log('🚨 Campaign Builder: Checking for emergency project data...');
+      const emergencyProjectData = await emergencyRecoverProjectData('default_user');
+      if (emergencyProjectData && emergencyProjectData.length > 0) {
+        console.log('🚨 Campaign Builder: Emergency project data recovered!');
+        setProjects(emergencyProjectData);
+        return;
+      }
+
+      // Try to load from API
       const response = await fetch('/api/company-projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,11 +151,25 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       });
       
       const data = await response.json();
-      if (data.success) {
-        setProjects(data.projects || []);
+      if (data.success && data.projects && data.projects.length > 0) {
+        setProjects(data.projects);
+        // Backup the loaded projects
+        await emergencyBackupProjectData(data.projects, 'default_user');
+      } else {
+        // No projects found, use defaults
+        console.log('🚨 Campaign Builder: No projects found, using defaults');
+        const defaultProjects = getDefaultProjectsData(selectedCompany);
+        setProjects(defaultProjects);
+        // Backup the default projects  
+        await emergencyBackupProjectData(defaultProjects, 'default_user');
       }
     } catch (error) {
       console.error('Error loading projects:', error);
+      // Error loading, use defaults
+      console.log('🚨 Campaign Builder: Error loading projects, using defaults');
+      const defaultProjects = getDefaultProjectsData(selectedCompany);
+      setProjects(defaultProjects);
+      await emergencyBackupProjectData(defaultProjects, 'default_user');
     }
   };
 
@@ -182,19 +211,43 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         7: '/api/ai/performance-analyzer'
       };
       
+      let requestBody = {
+        companyData: selectedCompany,
+        projectData: selectedProject,
+        previousSteps: stepData,
+        connectedAIs: connectedAIs,
+        userId: 'default_user'
+      };
+
+      // For media planner, include strategy from step 1
+      if (stepId === 2 && stepData[1] && stepData[1].result) {
+        requestBody.strategy = stepData[1].result;
+        requestBody.companyProfile = selectedCompany;
+      }
+
       const response = await fetch(endpoints[stepId], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyData: selectedCompany,
-          projectData: selectedProject,
-          previousSteps: stepData,
-          connectedAIs: connectedAIs,
-          userId: 'default_user'
-        })
+        body: JSON.stringify(requestBody)
       });
       
-      const data = await response.json();
+      console.log(`Step ${stepId} API response status:`, response.status);
+      
+      if (!response.ok) {
+        throw new Error(`API responded with status ${response.status}`);
+      }
+
+      const responseText = await response.text();
+      console.log(`Step ${stepId} raw response:`, responseText.substring(0, 200));
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error('Invalid JSON response from API');
+      }
       
       if (data.success) {
         // Store the generated content
