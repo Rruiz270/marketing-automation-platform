@@ -63,4 +63,5 @@ jspm_packages/
 .npm
 
 # Data storage directory (contains user data)
-/data/
+/data/.env.production
+data/ai-keys-storage.json

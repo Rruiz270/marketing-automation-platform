@@ -7,6 +7,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // EMERGENCY: Direct API key check at start
+  console.log('🚨 EMERGENCY API KEY CHECK:', {
+    hasEnvVar: !!process.env.OPENAI_API_KEY,
+    envVarLength: process.env.OPENAI_API_KEY?.length || 0,
+    startsWithSk: process.env.OPENAI_API_KEY?.startsWith('sk-') || false,
+    firstChars: process.env.OPENAI_API_KEY?.substring(0, 10) || 'none'
+  });
+
   // Handle both old and new parameter formats
   const { 
     objective, 
@@ -31,15 +39,16 @@ export default async function handler(req, res) {
     fullRequest: req.body
   });
 
-  // DEBUG: Log all environment variable states - FORCE REBUILD
-  console.log('🔍 Environment Variables Debug (OPENAI_API_KEY added):', {
+  // DEBUG: Log all environment variable states - EMERGENCY FIX V2
+  console.log('🔍 Environment Variables Debug (EMERGENCY FIX V2):', {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Present (${process.env.OPENAI_API_KEY.substring(0, 7)}...)` : 'Missing',
     OPENAI_KEY: process.env.OPENAI_KEY ? `Present (${process.env.OPENAI_KEY.substring(0, 7)}...)` : 'Missing',
     NODE_ENV: process.env.NODE_ENV,
     VERCEL: process.env.VERCEL,
     VERCEL_ENV: process.env.VERCEL_ENV,
     totalEnvVars: Object.keys(process.env).length,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    allEnvKeys: Object.keys(process.env).filter(key => key.includes('OPENAI') || key.includes('API'))
   });
 
   // Use new format if available, fall back to old format
