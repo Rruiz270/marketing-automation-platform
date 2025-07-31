@@ -6,13 +6,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { strategy, companyProfile, projectData, companyData, connectedAIs, ai_service, ai_service_name } = req.body;
+  const { companyData, projectData, previousSteps, connectedAIs, userId } = req.body;
   
   console.log('🎯 Media Planner API called:', {
-    hasStrategy: !!strategy,
-    hasCompanyData: !!(companyData || companyProfile),
-    connectedAIsCount: connectedAIs?.length || 0
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    connectedAIsCount: connectedAIs?.length || 0,
+    hasPreviousSteps: !!previousSteps
   });
+
+  // Use project and company data directly (like original system)
+  const company = companyData;
+  const project = projectData;
 
   try {
     // Get API key from multiple sources (same as strategy translator)
@@ -37,10 +42,10 @@ export default async function handler(req, res) {
     
     if (!apiKey || !apiKey.startsWith('sk-')) {
       console.log('❌ Media Planner: No valid API key found');
-      const fallbackMediaPlan = generateFallbackMediaPlan(strategy, companyData || companyProfile);
+      const fallbackMediaPlan = generateFallbackMediaPlan(project, company);
       return res.status(200).json({
         success: true,
-        mediaPlan: fallbackMediaPlan,
+        result: fallbackMediaPlan,
         metadata: {
           generated_at: new Date().toISOString(),
           ai_service: 'Fallback Generator',
@@ -54,23 +59,23 @@ export default async function handler(req, res) {
     });
 
     const mediaPlanPrompt = `
-As an expert media planner, create a detailed media plan based on the following strategy:
-
-Strategy Overview:
-- Objective: ${strategy.objective}
-- Budget: R$ ${strategy.budget}
-- Primary Channel: ${strategy.primaryChannel}
-- Target CPA: R$ ${strategy.targetCPA}
-- Expected ROAS: ${strategy.expectedROAS}x
-
-Channel Mix:
-${JSON.stringify(strategy.channelMix, null, 2)}
+As an expert media planner, create a detailed media plan based on the following information:
 
 Company Context:
-- Company: ${companyProfile?.companyName}
-- Industry: ${companyProfile?.industry}
-- Location: ${companyProfile?.geolocation}
-- Average Ticket: R$ ${companyProfile?.generalAverageTicket}
+- Company: ${company?.companyName || 'Company'}
+- Industry: ${company?.industry || 'Business'}
+- Location: ${company?.geolocation || 'Brazil'}
+- Target Public: ${company?.targetPublic || 'General audience'}
+- Monthly Budget: R$ ${company?.monthlyBudget || '10000'}
+- Average Ticket: R$ ${company?.generalAverageTicket || '500'}
+
+Project Details:
+- Project: ${project?.name || 'Campaign'}
+- Description: ${project?.description || 'Marketing campaign'}
+- Target Audience: ${project?.targetAudience || 'General audience'}
+- Budget: R$ ${project?.budget || '10000'}
+- Objectives: ${project?.objectives || 'Generate leads'}
+- Platforms: ${project?.platforms?.join(', ') || 'Google Ads, Facebook Ads'}
 
 Create a comprehensive media plan that includes:
 
@@ -139,30 +144,33 @@ Provide specific, actionable recommendations for maximizing campaign performance
       
       // Parse into structured media plan
       mediaPlan = {
-        totalBudget: parseFloat(strategy.budget),
+        totalBudget: parseFloat(project?.budget || '10000'),
         duration: '30 days',
-        channels: generateChannelPlans(strategy, companyProfile),
-        calendar: generateCampaignCalendar(strategy),
-        creativeSpecs: generateCreativeRequirements(strategy),
-        targeting: generateTargetingStrategy(strategy, companyProfile),
-        measurement: generateMeasurementFramework(strategy),
-        optimization: generateOptimizationPlan(strategy),
-        projections: generateProjections(strategy, companyProfile),
+        channels: generateChannelPlans(project, company),
+        calendar: generateCampaignCalendar(project),
+        creativeSpecs: generateCreativeRequirements(project),
+        targeting: generateTargetingStrategy(project, company),
+        measurement: generateMeasurementFramework(project),
+        optimization: generateOptimizationPlan(project),
+        projections: generateProjections(project, company),
         ai_insights: extractAIInsights(planText),
-        generated_by: ai_service_name || 'AI Media Planner'
+        generated_by: 'AI Media Planner',
+        objective: project?.objectives || 'Generate leads',
+        company: company?.companyName || 'Company',
+        project: project?.name || 'Campaign'
       };
 
     } catch (aiError) {
       console.error('AI API error:', aiError);
-      mediaPlan = generateFallbackMediaPlan(strategy, companyProfile);
+      mediaPlan = generateFallbackMediaPlan(project, company);
     }
 
     res.status(200).json({
       success: true,
-      mediaPlan,
+      result: mediaPlan,
       metadata: {
         generated_at: new Date().toISOString(),
-        ai_service: ai_service_name || 'Default AI',
+        ai_service: 'AI Media Planner',
         optimization_score: calculateOptimizationScore(mediaPlan)
       }
     });
@@ -172,20 +180,35 @@ Provide specific, actionable recommendations for maximizing campaign performance
     res.status(500).json({ 
       success: false,
       error: 'Media plan generation failed',
-      fallback_plan: generateFallbackMediaPlan(strategy, companyProfile)
+      result: generateFallbackMediaPlan(project, company)
     });
   }
 }
 
-function generateChannelPlans(strategy, companyProfile) {
-  const budget = parseFloat(strategy.budget) || 10000;
+function generateChannelPlans(project, company) {
+  const budget = parseFloat(project?.budget) || 10000;
   const channels = [];
   
+  // Default channel mix based on project platforms
+  const platforms = project?.platforms || ['Google Ads', 'Facebook Ads'];
+  const channelMix = {};
+  if (platforms.length === 1) {
+    channelMix[platforms[0]] = 100;
+  } else if (platforms.length === 2) {
+    channelMix[platforms[0]] = 60;
+    channelMix[platforms[1]] = 40;
+  } else {
+    const percentage = Math.floor(100 / platforms.length);
+    platforms.forEach(platform => {
+      channelMix[platform] = percentage;
+    });
+  }
+  
   // Calculate channel budgets based on mix
-  Object.entries(strategy.channelMix || {}).forEach(([channel, percentage]) => {
+  Object.entries(channelMix).forEach(([channel, percentage]) => {
     const channelBudget = (budget * percentage) / 100;
-    const avgCPC = getAverageCPC(channel, companyProfile?.industry);
-    const conversionRate = getExpectedConversionRate(channel, strategy.objective);
+    const avgCPC = getAverageCPC(channel, company?.industry);
+    const conversionRate = getExpectedConversionRate(channel, project?.objectives);
     
     channels.push({
       name: channel,
@@ -199,9 +222,9 @@ function generateChannelPlans(strategy, companyProfile) {
         cpa: Math.round(avgCPC / conversionRate),
         cpc: avgCPC
       },
-      tactics: getChannelTactics(channel, strategy.objective),
+      tactics: getChannelTactics(channel, project?.objectives),
       adFormats: getAdFormats(channel),
-      bidStrategy: getBidStrategy(channel, strategy.objective)
+      bidStrategy: getBidStrategy(channel, project?.objectives)
     });
   });
   
@@ -311,7 +334,7 @@ function getBidStrategy(channel, objective) {
   return strategies[objective] || 'Target CPA';
 }
 
-function generateCampaignCalendar(strategy) {
+function generateCampaignCalendar(project) {
   return {
     week1: {
       focus: 'Launch & Learning',
@@ -352,7 +375,7 @@ function generateCampaignCalendar(strategy) {
   };
 }
 
-function generateCreativeRequirements(strategy) {
+function generateCreativeRequirements(project) {
   return {
     copy: {
       headlines: {
@@ -391,16 +414,16 @@ function generateCreativeRequirements(strategy) {
   };
 }
 
-function generateTargetingStrategy(strategy, companyProfile) {
+function generateTargetingStrategy(project, company) {
   return {
     demographics: {
-      age: '25-45',
+      age: project?.targetAudience || '25-45',
       gender: 'All',
       income: 'Middle to high',
       education: 'College or higher'
     },
     geographic: {
-      primary: companyProfile?.geolocation || 'São Paulo, Brazil',
+      primary: company?.geolocation || 'São Paulo, Brazil',
       radius: '50km from city center',
       exclude: 'Low-income areas'
     },
@@ -426,7 +449,7 @@ function generateTargetingStrategy(strategy, companyProfile) {
   };
 }
 
-function generateMeasurementFramework(strategy) {
+function generateMeasurementFramework(project) {
   return {
     tracking: {
       pixels: ['Facebook Pixel', 'Google Analytics 4', 'Google Ads Tag'],
@@ -434,8 +457,8 @@ function generateMeasurementFramework(strategy) {
       attribution: '7-day click, 1-day view'
     },
     kpis: {
-      primary: strategy.kpis?.primary || ['CPA', 'Conversion Rate', 'ROAS'],
-      secondary: strategy.kpis?.secondary || ['CTR', 'CPC', 'CPM'],
+      primary: ['CPA', 'Conversion Rate', 'ROAS'],
+      secondary: ['CTR', 'CPC', 'CPM'],
       custom: ['Lead Quality Score', 'LTV:CAC Ratio']
     },
     reporting: {
@@ -451,7 +474,7 @@ function generateMeasurementFramework(strategy) {
   };
 }
 
-function generateOptimizationPlan(strategy) {
+function generateOptimizationPlan(project) {
   return {
     triggers: {
       pause: {
@@ -487,10 +510,10 @@ function generateOptimizationPlan(strategy) {
   };
 }
 
-function generateProjections(strategy, companyProfile) {
-  const budget = parseFloat(strategy.budget) || 10000;
-  const avgTicket = parseFloat(companyProfile?.generalAverageTicket) || 500;
-  const targetCPA = parseFloat(strategy.targetCPA) || 50;
+function generateProjections(project, company) {
+  const budget = parseFloat(project?.budget) || 10000;
+  const avgTicket = parseFloat(company?.generalAverageTicket) || 500;
+  const targetCPA = 50; // Default target CPA
   
   const projectedLeads = Math.floor(budget / targetCPA);
   const projectedRevenue = projectedLeads * avgTicket * 0.15; // 15% close rate
@@ -544,8 +567,8 @@ function calculateOptimizationScore(mediaPlan) {
   return Math.min(score, 95);
 }
 
-function generateFallbackMediaPlan(strategy, companyProfile) {
-  const budget = parseFloat(strategy.budget) || 10000;
+function generateFallbackMediaPlan(project, company) {
+  const budget = parseFloat(project?.budget) || 10000;
   
   return {
     totalBudget: budget,
