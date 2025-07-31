@@ -228,16 +228,24 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         7: '/api/ai/performance-analyzer'
       };
       
+      let requestBody = {
+        companyData: selectedCompany,
+        projectData: selectedProject,
+        previousSteps: stepData,
+        connectedAIs: connectedAIs,
+        userId: 'default_user'
+      };
+
+      // For media planner (step 2), send strategy data from step 1
+      if (stepId === 2 && stepData[1] && stepData[1].result) {
+        requestBody.strategy = stepData[1].result;
+        requestBody.companyProfile = selectedCompany;
+      }
+
       const response = await fetch(endpoints[stepId], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyData: selectedCompany,
-          projectData: selectedProject,
-          previousSteps: stepData,
-          connectedAIs: connectedAIs,
-          userId: 'default_user'
-        })
+        body: JSON.stringify(requestBody)
       });
       
       const data = await response.json();
