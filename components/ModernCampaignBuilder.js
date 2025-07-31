@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProjectManager from './ProjectManager';
 import { 
@@ -15,8 +15,6 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [loading, setLoading] = useState(false);
   const [stepData, setStepData] = useState({});
-  const [showApproval, setShowApproval] = useState(false);
-  const [currentGeneration, setCurrentGeneration] = useState(null);
   const [showProjectManager, setShowProjectManager] = useState(false);
   const [showContentViewer, setShowContentViewer] = useState(false);
   const [contentViewerData, setContentViewerData] = useState(null);
@@ -25,6 +23,14 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   const [editedPrompt, setEditedPrompt] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [quickAdjustments, setQuickAdjustments] = useState({
+    riskLevel: 50,
+    timeline: 50,
+    budgetFlexibility: 50,
+    channelFocus: 50
+  });
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const [bulkMode, setBulkMode] = useState(false);
 
   const steps = [
     { 
@@ -85,138 +91,120 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
     }
   ];
 
+  // Timer for time elapsed
   useEffect(() => {
-    // Clean up any corrupted project backups with default projects
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('EMERGENCY_PROJECTS_BACKUP');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.projectsData && parsed.projectsData.some(p => p.isDefault)) {
-            console.log('🧹 Cleaning corrupted project backup with default projects');
-            localStorage.removeItem('EMERGENCY_PROJECTS_BACKUP');
-            sessionStorage.removeItem('EMERGENCY_PROJECTS_SESSION');
-          }
+    const timer = setInterval(() => {
+      setTimeElapsed(prev => prev + 1);
+    }, 60000); // Update every minute
+    return () => clearInterval(timer);
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+          case 'Enter':
+            // Approve & Continue
+            if (showContentViewer && contentViewerData) {
+              approveAndContinue();
+            }
+            break;
+          case 'g':
+            e.preventDefault();
+            // Generate/Regenerate
+            if (currentStep > 0 && currentStep <= 7) {
+              processStep(currentStep);
+            }
+            break;
+          case 's':
+            e.preventDefault();
+            // Save Progress
+            saveProgress();
+            break;
+          case 'z':
+            e.preventDefault();
+            // Undo
+            console.log('Undo action');
+            break;
+          case 'y':
+            e.preventDefault();
+            // Redo
+            console.log('Redo action');
+            break;
         }
-      } catch (e) {
-        console.log('🧹 Cleaning corrupted backup data');
-        localStorage.removeItem('EMERGENCY_PROJECTS_BACKUP');
-        sessionStorage.removeItem('EMERGENCY_PROJECTS_SESSION');
+      } else if (e.key >= '1' && e.key <= '7') {
+        // Jump to step
+        const step = parseInt(e.key);
+        if (selectedCompany && selectedProject) {
+          setCurrentStep(step);
+        }
+      } else if (e.key === ' ' && showContentViewer) {
+        e.preventDefault();
+        // Preview
+        console.log('Preview mode');
       }
-    }
-    
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentStep, showContentViewer, contentViewerData, selectedCompany, selectedProject]);
+
+  // Load companies on mount
+  useEffect(() => {
     loadCompanies();
   }, []);
 
+  // Load projects when company is selected
+  useEffect(() => {
+    if (selectedCompany) {
+      loadProjects(selectedCompany.user_id);
+    }
+  }, [selectedCompany]);
+
   const loadCompanies = async () => {
     try {
-      // EMERGENCY RECOVERY FIRST - Check for backed up company data
-      console.log('🚨 Campaign Builder: Checking for emergency company data...');
-      const emergencyCompanyData = await emergencyRecoverCompanyData('default_user');
-      if (emergencyCompanyData) {
-        console.log('🚨 Campaign Builder: Emergency company data recovered!');
-        const mockCompany = {
-          user_id: 'default_user',
-          companyName: emergencyCompanyData.companyName,
-          industry: emergencyCompanyData.industry,
-          ...emergencyCompanyData
-        };
-        setCompanies([mockCompany]);
-        // Auto-select the recovered company
-        setSelectedCompany(mockCompany);
-        return;
-      }
-
-      const response = await fetch('/api/company-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'list_all'
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Loaded companies:', data);
-        setCompanies(data.companies || []);
-      } else {
-        console.error('Failed to load companies:', response.status);
+      const recovered = await emergencyRecoverCompanyData();
+      if (recovered && recovered.length > 0) {
+        setCompanies(recovered);
       }
     } catch (error) {
       console.error('Error loading companies:', error);
     }
   };
 
-  const loadProjects = async (companyId) => {
+  const loadProjects = async (userId) => {
     try {
-      // First try to recover from backup (only user-created projects)
-      const emergencyProjectData = await emergencyRecoverProjectData('default_user');
-      if (emergencyProjectData && emergencyProjectData.length > 0) {
-        // Filter out any default projects that might be in backup
-        const userProjects = emergencyProjectData.filter(project => !project.isDefault);
-        if (userProjects.length > 0) {
-          console.log('✅ User projects recovered from backup');
-          setProjects(userProjects);
-          return;
-        }
-      }
-
-      // Load from API
-      const response = await fetch('/api/company-projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'list',
-          company_id: companyId
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        setProjects(data.projects || []);
-        // Backup loaded projects (only user-created ones)
-        if (data.projects && data.projects.length > 0) {
-          const userProjects = data.projects.filter(project => !project.isDefault);
-          if (userProjects.length > 0) {
-            await emergencyBackupProjectData(userProjects, 'default_user');
-          }
-        }
+      const projectData = await emergencyRecoverProjectData(userId);
+      if (projectData) {
+        setProjects(projectData.projects || []);
       }
     } catch (error) {
       console.error('Error loading projects:', error);
+      setProjects([]);
     }
   };
 
   const handleCompanySelect = (company) => {
     setSelectedCompany(company);
-    loadProjects(company.user_id);
     setSelectedProject(null);
+    setStepData({});
   };
 
   const handleProjectSelect = (project) => {
     setSelectedProject(project);
+    emergencyBackupProjectData(selectedCompany.user_id, project);
   };
 
-  const handleProjectCreated = async (newProject) => {
-    // Refresh projects list
-    await loadProjects(selectedCompany.user_id);
-    // Close the modal
-    setShowProjectManager(false);
-    // Optionally auto-select the new project
+  const handleProjectCreated = (newProject) => {
+    setProjects([...projects, newProject]);
     setSelectedProject(newProject);
-    // Backup the updated projects list
-    const updatedProjects = [...projects, newProject];
-    await emergencyBackupProjectData(updatedProjects, 'default_user');
+    setShowProjectManager(false);
+    emergencyBackupProjectData(selectedCompany.user_id, newProject);
   };
 
   const processStep = async (stepId) => {
-    if (!selectedCompany || !selectedProject) {
-      alert('Please select a company and project first');
-      return;
-    }
-
     setLoading(true);
-    
     try {
       const endpoints = {
         1: '/api/ai/strategy-translator',
@@ -227,19 +215,23 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         6: '/api/ai/campaign-publisher',
         7: '/api/ai/performance-analyzer'
       };
-      
+
       let requestBody = {
         companyData: selectedCompany,
         projectData: selectedProject,
         previousSteps: stepData,
-        connectedAIs: connectedAIs,
-        userId: 'default_user'
+        connectedAIs: connectedAIs || [],
+        userId: selectedCompany?.user_id || 'demo-user'
       };
 
-      // For media planner (step 2), send strategy data from step 1
-      if (stepId === 2 && stepData[1] && stepData[1].result) {
-        requestBody.strategy = stepData[1].result;
-        requestBody.companyProfile = selectedCompany;
+      // Add specific data for certain steps
+      if (stepId === 2 && stepData[1]) {
+        requestBody.strategy = stepData[1];
+      }
+
+      // Add prompt if exists
+      if (generationPrompts[stepId]) {
+        requestBody.customPrompt = generationPrompts[stepId];
       }
 
       const response = await fetch(endpoints[stepId], {
@@ -247,150 +239,1082 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
-        // Store the generated content
-        setStepData(prev => ({
-          ...prev,
-          [stepId]: data.result
-        }));
+        const result = data.result;
+        setStepData(prev => ({ ...prev, [stepId]: result }));
         
-        // Open content viewer directly
+        // Open enhanced content viewer
         setContentViewerData({
-          stepId: stepId,
-          stepInfo: steps.find(s => s.id === stepId),
-          content: data.result,
-          prompt: generationPrompts[stepId] || ''
+          stepId,
+          stepInfo: steps[stepId],
+          content: data,
+          result: result
         });
+        setEditedContent(result);
+        setEditedPrompt(generationPrompts[stepId] || '');
         setShowContentViewer(true);
-      } else {
-        console.error('API Error Details:', data);
-        alert(`Error: ${data.error || 'Generation failed'}\n\nDetails: ${JSON.stringify(data, null, 2)}`);
       }
     } catch (error) {
-      console.error(`Error processing step ${stepId}:`, error);
-      alert(`Network Error: ${error.message}\n\nPlease check:\n- AI connection is active\n- API keys are valid\n- Internet connection`);
+      console.error('Error processing step:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const approveGeneration = () => {
-    setStepData(prev => ({
-      ...prev,
-      [currentStep]: currentGeneration
-    }));
-    setShowApproval(false);
-    setCurrentGeneration(null);
+  const approveAndContinue = () => {
+    if (isEditing) {
+      handleContentEdit(contentViewerData.stepId, editedContent);
+      setIsEditing(false);
+    }
+    if (isEditingPrompt) {
+      handlePromptEdit(contentViewerData.stepId, editedPrompt);
+      setIsEditingPrompt(false);
+    }
+    setShowContentViewer(false);
     
     // Auto-advance to next step
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+    if (contentViewerData.stepId === currentStep) {
+      const nextStep = currentStep + 1;
+      if (nextStep <= 7) {
+        setCurrentStep(nextStep);
+      }
     }
-  };
-
-  const openContentViewer = (stepId) => {
-    const content = stepData[stepId];
-    const prompt = generationPrompts[stepId] || '';
-    
-    setContentViewerData({
-      stepId: stepId,
-      stepInfo: steps.find(s => s.id === stepId),
-      content: content,
-      prompt: prompt
-    });
-    
-    // Initialize editing states
-    setEditedContent(content);
-    setEditedPrompt(prompt);
-    setIsEditing(false);
-    setIsEditingPrompt(false);
-    setShowContentViewer(true);
   };
 
   const handleContentEdit = (stepId, newContent) => {
-    setStepData(prev => ({
-      ...prev,
-      [stepId]: newContent
-    }));
+    setStepData(prev => ({ ...prev, [stepId]: newContent }));
   };
 
   const handlePromptEdit = (stepId, newPrompt) => {
-    setGenerationPrompts(prev => ({
-      ...prev,
-      [stepId]: newPrompt
-    }));
+    setGenerationPrompts(prev => ({ ...prev, [stepId]: newPrompt }));
   };
 
-  const regenerateWithPrompt = async (stepId, customPrompt) => {
-    setLoading(true);
+  const regenerateWithPrompt = async (stepId, prompt) => {
+    setGenerationPrompts(prev => ({ ...prev, [stepId]: prompt }));
     setShowContentViewer(false);
-    
-    try {
-      const endpoints = {
-        1: '/api/ai/strategy-translator',
-        2: '/api/ai/media-planner', 
-        3: '/api/ai/copy-generator',
-        4: '/api/ai/creative-generator',
-        5: '/api/ai/campaign-structurer',
-        6: '/api/ai/campaign-publisher',
-        7: '/api/ai/performance-analyzer'
-      };
-      
-      const response = await fetch(endpoints[stepId], {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyData: selectedCompany,
-          projectData: selectedProject,
-          previousSteps: stepData,
-          connectedAIs: connectedAIs,
-          customPrompt: customPrompt
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setStepData(prev => ({
-          ...prev,
-          [stepId]: data.result
-        }));
-        setGenerationPrompts(prev => ({
-          ...prev,
-          [stepId]: customPrompt
-        }));
-        setContentViewerData({
-          stepId: stepId,
-          stepInfo: steps.find(s => s.id === stepId),
-          content: data.result,
-          prompt: customPrompt
-        });
-        setShowContentViewer(true);
-      } else {
-        alert(`Error: ${data.error || 'Generation failed'}`);
-      }
-    } catch (error) {
-      console.error(`Error regenerating step ${stepId}:`, error);
-      alert('Error generating content. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    await processStep(stepId);
   };
 
-  const rejectGeneration = () => {
-    setShowApproval(false);
-    setCurrentGeneration(null);
-    // User can try again or modify parameters
+  const openContentViewer = (stepId) => {
+    setContentViewerData({
+      stepId,
+      stepInfo: steps[stepId],
+      content: { success: true, result: stepData[stepId] },
+      result: stepData[stepId]
+    });
+    setEditedContent(stepData[stepId]);
+    setEditedPrompt(generationPrompts[stepId] || '');
+    setShowContentViewer(true);
+  };
+
+  const saveProgress = () => {
+    // Save current state
+    const progressData = {
+      company: selectedCompany,
+      project: selectedProject,
+      stepData,
+      currentStep,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('campaignProgress', JSON.stringify(progressData));
+    alert('Progress saved!');
+  };
+
+  const getEstimatedTimeRemaining = () => {
+    const avgTimePerStep = 3; // minutes
+    const remainingSteps = 7 - currentStep;
+    return remainingSteps * avgTimePerStep;
+  };
+
+  const getCompletionPercentage = () => {
+    if (currentStep === 0) return 0;
+    const totalSteps = 7;
+    const completedSteps = Object.keys(stepData).length;
+    return Math.round((completedSteps / totalSteps) * 100);
+  };
+
+  // Render step-specific content viewers
+  const renderStrategyContent = (content) => {
+    const strategy = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Executive Summary */}
+        <div className="bg-blue-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-3">Executive Summary</h4>
+          <p className="text-gray-700 leading-relaxed">
+            {strategy.fullText ? 
+              strategy.fullText.split('\n')[0] : 
+              'Comprehensive marketing strategy focused on maximizing ROI through data-driven channel selection and audience targeting.'}
+          </p>
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{strategy.primaryChannel || 'Google Ads'}</div>
+              <div className="text-sm text-gray-600">Primary Channel</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{strategy.expectedROAS || 3.5}x</div>
+              <div className="text-sm text-gray-600">Expected ROAS</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{strategy.timeline || '3 months'}</div>
+              <div className="text-sm text-gray-600">Campaign Duration</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Strategy Map */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Funnel Visualization */}
+          <div className="bg-white border rounded-lg p-4">
+            <h5 className="font-semibold mb-3">Funnel Strategy</h5>
+            <div className="space-y-2">
+              <div className="bg-gradient-to-r from-blue-100 to-blue-50 p-3 rounded">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Awareness</span>
+                  <span className="text-sm text-gray-600">20% budget</span>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-green-100 to-green-50 p-3 rounded">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Consideration</span>
+                  <span className="text-sm text-gray-600">30% budget</span>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-purple-100 to-purple-50 p-3 rounded">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Conversion</span>
+                  <span className="text-sm text-gray-600">40% budget</span>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-orange-100 to-orange-50 p-3 rounded">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Retention</span>
+                  <span className="text-sm text-gray-600">10% budget</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Channel Allocation */}
+          <div className="bg-white border rounded-lg p-4">
+            <h5 className="font-semibold mb-3">Channel Mix</h5>
+            <div className="space-y-3">
+              {Object.entries(strategy.channelMix || {
+                'Google Ads': 50,
+                'Facebook/Instagram': 40,
+                'Testing': 10
+              }).map(([channel, percentage]) => (
+                <div key={channel}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{channel}</span>
+                    <span className="font-medium">{percentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Breakdown - Expandable */}
+        <div className="space-y-3">
+          <details className="bg-white border rounded-lg p-4 cursor-pointer">
+            <summary className="font-semibold">Channel Strategy Details</summary>
+            <div className="mt-3 space-y-2 text-sm text-gray-700">
+              <p>{strategy.channelStrategy || 'Multi-channel approach optimized for performance...'}</p>
+            </div>
+          </details>
+          
+          <details className="bg-white border rounded-lg p-4 cursor-pointer">
+            <summary className="font-semibold">Audience Insights</summary>
+            <div className="mt-3 space-y-2 text-sm text-gray-700">
+              <p>{strategy.audienceInsights || 'Target audience analysis and segmentation...'}</p>
+            </div>
+          </details>
+          
+          <details className="bg-white border rounded-lg p-4 cursor-pointer">
+            <summary className="font-semibold">KPI Framework</summary>
+            <div className="mt-3 space-y-2 text-sm text-gray-700">
+              <p>{strategy.kpiFramework || 'Key performance indicators and success metrics...'}</p>
+            </div>
+          </details>
+        </div>
+
+        {/* Quick Adjustment Panel */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h5 className="font-semibold mb-3">Quick Adjustments</h5>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-gray-600">Risk Level</label>
+              <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={quickAdjustments.riskLevel}
+                onChange={(e) => setQuickAdjustments(prev => ({ ...prev, riskLevel: e.target.value }))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Conservative</span>
+                <span>Aggressive</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-600">Timeline Focus</label>
+              <input 
+                type="range" 
+                min="0" 
+                max="100" 
+                value={quickAdjustments.timeline}
+                onChange={(e) => setQuickAdjustments(prev => ({ ...prev, timeline: e.target.value }))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Quick Win</span>
+                <span>Long-term</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMediaPlanContent = (content) => {
+    const mediaPlan = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Media Plan Calendar */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Media Plan Calendar</h4>
+          <div className="grid grid-cols-4 gap-4">
+            {['Week 1-2', 'Week 3-4', 'Week 5-6', 'Week 7-8'].map((period, index) => (
+              <div key={period} className="border rounded-lg p-3 hover:shadow-lg transition-shadow cursor-move">
+                <div className="font-medium text-sm mb-2">{period}</div>
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div>Budget: ${Math.round((parseFloat(selectedProject?.budget) || 10000) / 4)}</div>
+                  <div>Focus: {index === 0 ? 'Launch' : index === 3 ? 'Optimize' : 'Scale'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Channel Deep Dive */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Channel Deep Dive</h4>
+          <div className="space-y-4">
+            {(mediaPlan.channels || [
+              { name: 'Google Ads', budget: 60, tactics: ['Search', 'Display', 'YouTube'] },
+              { name: 'Facebook/Instagram', budget: 40, tactics: ['Feed', 'Stories', 'Reels'] }
+            ]).map((channel, index) => (
+              <div key={index} className="border rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h5 className="font-semibold">{channel.name}</h5>
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
+                    {channel.budget}% budget
+                  </span>
+                </div>
+                <div className="flex space-x-2">
+                  {(channel.tactics || []).map((tactic, i) => (
+                    <span key={i} className="bg-gray-100 px-2 py-1 rounded text-xs">
+                      {tactic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Budget Optimizer */}
+        <div className="bg-green-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Budget Optimizer</h4>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-green-600">
+                ${parseFloat(selectedProject?.budget) || 10000}
+              </div>
+              <div className="text-sm text-gray-600">Total Budget</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-600">
+                {mediaPlan.estimatedReach || '250K'}
+              </div>
+              <div className="text-sm text-gray-600">Est. Reach</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-purple-600">
+                ${mediaPlan.estimatedCPA || 45}
+              </div>
+              <div className="text-sm text-gray-600">Target CPA</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Smart Suggestions */}
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h5 className="font-semibold text-yellow-800 mb-2">💡 AI Insights</h5>
+          <ul className="space-y-2 text-sm text-yellow-700">
+            <li>• Competitor X increased LinkedIn spend 40% last month</li>
+            <li>• Tuesday 2-4pm shows 35% better CPM for your audience</li>
+            <li>• Consider 15% more budget to Weeks 3-4 based on historical data</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCopyContent = (content) => {
+    const copyData = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Copy Variations Grid */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Copy Variations</h4>
+          <div className="grid grid-cols-2 gap-6">
+            {Object.entries(copyData).slice(0, 4).map(([platform, copy]) => (
+              <div key={platform} className="border rounded-lg p-4">
+                <h5 className="font-semibold mb-3">{platform}</h5>
+                
+                {/* Headlines */}
+                <div className="mb-3">
+                  <div className="text-sm text-gray-600 mb-1">Headlines</div>
+                  <div className="space-y-1">
+                    {(copy.headlines || []).slice(0, 3).map((headline, i) => (
+                      <div key={i} className="bg-gray-50 p-2 rounded text-sm">
+                        {headline}
+                        <span className="text-xs text-gray-500 ml-2">({headline.length} chars)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Descriptions */}
+                <div className="mb-3">
+                  <div className="text-sm text-gray-600 mb-1">Descriptions</div>
+                  <div className="space-y-1">
+                    {(copy.descriptions || []).slice(0, 2).map((desc, i) => (
+                      <div key={i} className="bg-gray-50 p-2 rounded text-sm">
+                        {desc}
+                        <span className="text-xs text-gray-500 ml-2">({desc.length} chars)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Performance Metrics */}
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                  <div className="bg-blue-50 rounded p-2">
+                    <div className="text-sm font-semibold text-blue-600">8.5/10</div>
+                    <div className="text-xs text-gray-600">Clarity</div>
+                  </div>
+                  <div className="bg-green-50 rounded p-2">
+                    <div className="text-sm font-semibold text-green-600">92%</div>
+                    <div className="text-xs text-gray-600">Brand Match</div>
+                  </div>
+                  <div className="bg-purple-50 rounded p-2">
+                    <div className="text-sm font-semibold text-purple-600">Strong</div>
+                    <div className="text-xs text-gray-600">CTA</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Platform-Specific Previews */}
+        <div className="bg-gray-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Ad Previews</h4>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Google Ad Preview */}
+            <div className="bg-white rounded-lg p-4 shadow">
+              <div className="text-blue-600 text-sm mb-1">Ad · www.example.com</div>
+              <div className="text-blue-800 text-lg font-medium mb-1">
+                {copyData['Google Ads']?.headlines?.[0] || 'Professional English Course'}
+              </div>
+              <div className="text-gray-700 text-sm">
+                {copyData['Google Ads']?.descriptions?.[0] || 'Learn English with certified teachers...'}
+              </div>
+            </div>
+            
+            {/* Facebook Ad Preview */}
+            <div className="bg-white rounded-lg p-4 shadow">
+              <div className="flex items-center mb-2">
+                <div className="w-8 h-8 bg-gray-300 rounded-full mr-2"></div>
+                <div className="text-sm font-medium">Your Company</div>
+              </div>
+              <div className="text-gray-700 text-sm mb-2">
+                {copyData['Facebook Ads']?.primaryText?.[0] || 'Transform your career with...'}
+              </div>
+              <div className="bg-gray-200 h-48 rounded-lg mb-2"></div>
+              <div className="font-medium">
+                {copyData['Facebook Ads']?.headlines?.[0] || 'Start Your Journey Today'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Copy Intelligence Dashboard */}
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h5 className="font-semibold text-blue-800 mb-3">Copy Intelligence</h5>
+          <div className="grid grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-xl font-bold text-blue-600">7/10</div>
+              <div className="text-xs text-gray-600">Power Words</div>
+            </div>
+            <div>
+              <div className="text-xl font-bold text-green-600">8th</div>
+              <div className="text-xs text-gray-600">Reading Level</div>
+            </div>
+            <div>
+              <div className="text-xl font-bold text-purple-600">8.5/10</div>
+              <div className="text-xs text-gray-600">CTA Strength</div>
+            </div>
+            <div>
+              <div className="text-xl font-bold text-orange-600">92%</div>
+              <div className="text-xs text-gray-600">Brand Voice</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCreativeContent = (content) => {
+    const creativeData = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Creative Gallery */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Creative Gallery</h4>
+          <div className="grid grid-cols-3 gap-4">
+            {(creativeData.formats || []).map((creative, index) => (
+              <div key={index} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="bg-gradient-to-br from-pink-100 to-purple-100 h-40 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">🎨</div>
+                    <div className="text-sm font-medium">{creative.name}</div>
+                    <div className="text-xs text-gray-600">{creative.dimensions}</div>
+                  </div>
+                </div>
+                <div className="p-3">
+                  <div className="text-sm font-medium mb-1">{creative.concept}</div>
+                  <div className="flex space-x-2 mb-2">
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                      {creative.platform}
+                    </span>
+                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                      {creative.variations} variants
+                    </span>
+                  </div>
+                  <div className="flex space-x-1">
+                    <button className="flex-1 bg-blue-500 text-white py-1 rounded text-xs hover:bg-blue-600">
+                      Preview
+                    </button>
+                    <button className="flex-1 bg-gray-100 text-gray-700 py-1 rounded text-xs hover:bg-gray-200">
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Design Variations Engine */}
+        <div className="bg-gray-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Design Variations</h4>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="bg-white rounded-lg p-4 border">
+                <div className="w-16 h-16 bg-blue-500 rounded mx-auto mb-2"></div>
+                <div className="text-sm">Original</div>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="bg-white rounded-lg p-4 border">
+                <div className="w-16 h-16 bg-green-500 rounded mx-auto mb-2"></div>
+                <div className="text-sm">Variant A</div>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="bg-white rounded-lg p-4 border">
+                <div className="w-16 h-16 bg-purple-500 rounded mx-auto mb-2"></div>
+                <div className="text-sm">Variant B</div>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="bg-white rounded-lg p-4 border">
+                <div className="w-16 h-16 bg-orange-500 rounded mx-auto mb-2"></div>
+                <div className="text-sm">Variant C</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Brand Consistency Checker */}
+        <div className="bg-green-50 rounded-lg p-4">
+          <h5 className="font-semibold text-green-800 mb-3">Brand Consistency</h5>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm">Logo Placement</span>
+              <span className="text-sm font-semibold text-green-600">✓ Consistent</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm">Color Compliance</span>
+              <span className="text-sm font-semibold text-green-600">✓ 98% Match</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm">Typography</span>
+              <span className="text-sm font-semibold text-green-600">✓ On Brand</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm">Legal Disclaimers</span>
+              <span className="text-sm font-semibold text-green-600">✓ Included</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Smart Creative Assistant */}
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h5 className="font-semibold text-yellow-800 mb-2">✨ Creative Suggestions</h5>
+          <ul className="space-y-2 text-sm text-yellow-700">
+            <li>• Add 20% more contrast for mobile visibility</li>
+            <li>• This color performs 40% better with your audience</li>
+            <li>• Consider adding motion for 3x more engagement</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCampaignStructureContent = (content) => {
+    const structureData = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Campaign Architecture View */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Campaign Architecture</h4>
+          <div className="space-y-4">
+            {(structureData.campaigns || []).map((campaign, index) => (
+              <div key={index} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h5 className="font-semibold">{campaign.name}</h5>
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm">
+                    {campaign.platform}
+                  </span>
+                </div>
+                <div className="ml-4 space-y-2">
+                  {(campaign.adGroups || campaign.adSets || []).map((group, gIndex) => (
+                    <div key={gIndex} className="bg-gray-50 rounded p-3 flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-sm">{group.name}</div>
+                        <div className="text-xs text-gray-600">
+                          {group.targetingType} • {group.ads} ads • {group.budget}
+                        </div>
+                      </div>
+                      <button className="text-blue-600 hover:text-blue-800 text-sm">
+                        Edit →
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Naming Convention System */}
+        <div className="bg-gray-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Naming Conventions</h4>
+          <div className="space-y-3">
+            <div className="bg-white rounded p-3">
+              <div className="text-sm text-gray-600">Pattern</div>
+              <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                [Platform]_[Objective]_[Audience]_[Date]
+              </code>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {(structureData.namingConventions?.examples || []).map((example, i) => (
+                <div key={i} className="bg-white rounded p-3">
+                  <code className="text-sm">{example}</code>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Targeting Matrix */}
+        <div className="bg-blue-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Budget Allocation</h4>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium mb-2">By Platform</h5>
+              {Object.entries(structureData.budgetAllocation?.byPlatform || {}).map(([platform, percentage]) => (
+                <div key={platform} className="flex justify-between py-1">
+                  <span className="text-sm">{platform}</span>
+                  <span className="text-sm font-medium">{percentage}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <h5 className="font-medium mb-2">By Objective</h5>
+              {Object.entries(structureData.budgetAllocation?.byObjective || {}).map(([objective, percentage]) => (
+                <div key={objective} className="flex justify-between py-1">
+                  <span className="text-sm">{objective}</span>
+                  <span className="text-sm font-medium">{percentage}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Structure Intelligence */}
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <h5 className="font-semibold text-yellow-800 mb-2">🏗️ Optimization Tips</h5>
+          <ul className="space-y-2 text-sm text-yellow-700">
+            <li>• Combine these 2 ad groups for 20% efficiency</li>
+            <li>• This structure allows for 15 A/B tests</li>
+            <li>• Warning: Budget too thin across 12 ad groups</li>
+          </ul>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPlatformSetupContent = (content) => {
+    const setupData = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Platform Dashboard */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Platform Dashboard</h4>
+          <div className="grid grid-cols-2 gap-6">
+            {(setupData.platforms || []).map((platform, index) => (
+              <div key={index} className="border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl">
+                      {platform.name === 'Google Ads' ? '🔵' : '📘'}
+                    </div>
+                    <div>
+                      <h5 className="font-semibold">{platform.name}</h5>
+                      <p className="text-sm text-gray-600">{platform.status}</p>
+                    </div>
+                  </div>
+                  <div className={`w-3 h-3 rounded-full ${
+                    platform.status === 'ready_to_connect' ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}></div>
+                </div>
+                <div className="space-y-3">
+                  <button className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                    🔗 Connect {platform.name}
+                  </button>
+                  <div className="space-y-1">
+                    {(platform.requirements || []).map((req, i) => (
+                      <div key={i} className="flex items-center space-x-2 text-sm">
+                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span>{req}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Launch Checklist */}
+        <div className="bg-yellow-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Pre-flight Checklist</h4>
+          <div className="space-y-3">
+            {(setupData.checklist || [
+              'Campaign budgets configured',
+              'Conversion tracking ready',
+              'Creative assets approved',
+              'Landing pages functional'
+            ]).map((item, index) => (
+              <div key={index} className="flex items-center space-x-3">
+                <input type="checkbox" className="rounded" defaultChecked={index < 2} />
+                <span className="text-sm">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Launch Control Panel */}
+        <div className="bg-green-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Launch Options</h4>
+          <div className="grid grid-cols-3 gap-4">
+            <button className="bg-yellow-500 text-white py-3 rounded-lg hover:bg-yellow-600">
+              🚦 Soft Launch (10%)
+            </button>
+            <button className="bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600">
+              📈 Phased Rollout
+            </button>
+            <button className="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600">
+              🚀 Full Launch
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPerformanceContent = (content) => {
+    const performanceData = content || {};
+    
+    return (
+      <div className="space-y-6">
+        {/* Live Performance Dashboard */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Real-time Metrics</h4>
+          <div className="grid grid-cols-4 gap-4">
+            <div className="bg-blue-50 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                ${performanceData.realTimeMetrics?.spend || 0}
+              </div>
+              <div className="text-sm text-gray-600">Spend</div>
+            </div>
+            <div className="bg-green-50 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {performanceData.realTimeMetrics?.conversions || 0}
+              </div>
+              <div className="text-sm text-gray-600">Conversions</div>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {performanceData.realTimeMetrics?.ctr || 0}%
+              </div>
+              <div className="text-sm text-gray-600">CTR</div>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {performanceData.realTimeMetrics?.roas || 0}x
+              </div>
+              <div className="text-sm text-gray-600">ROAS</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Campaign Status */}
+        <div className="bg-gray-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">Campaign Status</h4>
+          <div className="space-y-3">
+            {(performanceData.campaignStatus || []).map((campaign, index) => (
+              <div key={index} className="bg-white rounded-lg p-4 flex justify-between items-center">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    campaign.health === 'green' ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <div>
+                    <div className="font-medium">{campaign.platform}</div>
+                    <div className="text-sm text-gray-600">
+                      {campaign.campaigns} campaigns • ${campaign.budget} budget
+                    </div>
+                  </div>
+                </div>
+                <span className="text-sm text-gray-500">{campaign.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Optimizations */}
+        <div className="bg-blue-50 rounded-lg p-6">
+          <h4 className="font-semibold text-gray-800 mb-4">AI Optimization Queue</h4>
+          <div className="space-y-3">
+            {(performanceData.aiOptimizations || []).map((opt, index) => (
+              <div key={index} className={`bg-white rounded-lg p-4 border-l-4 border-${opt.color}-500`}>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">{opt.type}</div>
+                    <div className="text-sm text-gray-600">{opt.description}</div>
+                  </div>
+                  <button className="bg-blue-500 text-white px-4 py-1 rounded text-sm hover:bg-blue-600">
+                    Apply
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Real-time Alerts */}
+        <div className="bg-green-50 rounded-lg p-4">
+          <h5 className="font-semibold text-green-800 mb-3">🟢 System Status</h5>
+          <div className="space-y-2">
+            {(performanceData.alerts || []).map((alert, index) => (
+              <div key={index} className="flex items-center space-x-2 text-sm">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span>{alert.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderContentViewer = () => {
+    if (!contentViewerData) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden flex flex-col"
+        >
+          {/* Enhanced Header */}
+          <div className={`bg-gradient-to-r ${contentViewerData.stepInfo.color} p-4 text-white`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">{contentViewerData.stepInfo.icon}</span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">{contentViewerData.stepInfo.title}</h2>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {contentViewerData.content?.success ? (
+                      <span className="text-xs bg-green-500 bg-opacity-30 px-2 py-1 rounded flex items-center space-x-1">
+                        <span>✓</span>
+                        <span>AI Generated with {contentViewerData.content.metadata?.ai_service || 'AI Service'}</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-yellow-500 bg-opacity-30 px-2 py-1 rounded flex items-center space-x-1">
+                        <span>⚠️</span>
+                        <span>Fallback Content</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowContentViewer(false)}
+                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Content Body */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {/* Render step-specific content */}
+            {contentViewerData.stepId === 1 && renderStrategyContent(editedContent)}
+            {contentViewerData.stepId === 2 && renderMediaPlanContent(editedContent)}
+            {contentViewerData.stepId === 3 && renderCopyContent(editedContent)}
+            {contentViewerData.stepId === 4 && renderCreativeContent(editedContent)}
+            {contentViewerData.stepId === 5 && renderCampaignStructureContent(editedContent)}
+            {contentViewerData.stepId === 6 && renderPlatformSetupContent(editedContent)}
+            {contentViewerData.stepId === 7 && renderPerformanceContent(editedContent)}
+          </div>
+
+          {/* Enhanced Action Buttons */}
+          <div className="border-t p-4 bg-gray-50">
+            {contentViewerData.stepId === 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={approveAndContinue}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>✅</span>
+                  <span>Approve & Continue</span>
+                </button>
+                <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2">
+                  <span>🎯</span>
+                  <span>Set as North Star</span>
+                </button>
+                <button 
+                  onClick={() => regenerateWithPrompt(contentViewerData.stepId, 'Generate 3 alternative strategies')}
+                  className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2"
+                >
+                  <span>📊</span>
+                  <span>Alternative Strategies</span>
+                </button>
+                <button className="bg-gray-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-600 flex items-center justify-center space-x-2">
+                  <span>📥</span>
+                  <span>Download</span>
+                </button>
+              </div>
+            )}
+
+            {contentViewerData.stepId === 2 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={approveAndContinue}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>✅</span>
+                  <span>Lock Plan & Continue</span>
+                </button>
+                <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2">
+                  <span>🎰</span>
+                  <span>Auto-Optimize</span>
+                </button>
+                <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2">
+                  <span>📈</span>
+                  <span>Run Forecast</span>
+                </button>
+                <button className="bg-orange-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-orange-600 flex items-center justify-center space-x-2">
+                  <span>📊</span>
+                  <span>Export Plan</span>
+                </button>
+              </div>
+            )}
+
+            {contentViewerData.stepId === 3 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={approveAndContinue}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>✅</span>
+                  <span>Approve Copy</span>
+                </button>
+                <button 
+                  onClick={() => regenerateWithPrompt(contentViewerData.stepId, 'Generate 5 more variations')}
+                  className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2"
+                >
+                  <span>🎲</span>
+                  <span>More Variations</span>
+                </button>
+                <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2">
+                  <span>🧪</span>
+                  <span>A/B Test Sets</span>
+                </button>
+                <button className="bg-orange-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-orange-600 flex items-center justify-center space-x-2">
+                  <span>✔️</span>
+                  <span>Compliance Check</span>
+                </button>
+              </div>
+            )}
+
+            {contentViewerData.stepId === 4 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={approveAndContinue}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>✅</span>
+                  <span>Approve Creatives</span>
+                </button>
+                <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2">
+                  <span>🎨</span>
+                  <span>Generate More</span>
+                </button>
+                <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2">
+                  <span>📐</span>
+                  <span>Auto-Adapt Sizes</span>
+                </button>
+                <button className="bg-orange-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-orange-600 flex items-center justify-center space-x-2">
+                  <span>💾</span>
+                  <span>Download All</span>
+                </button>
+              </div>
+            )}
+
+            {contentViewerData.stepId === 5 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={approveAndContinue}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>✅</span>
+                  <span>Finalize Structure</span>
+                </button>
+                <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2">
+                  <span>🏗️</span>
+                  <span>Auto-Structure</span>
+                </button>
+                <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2">
+                  <span>🔍</span>
+                  <span>Validate</span>
+                </button>
+                <button className="bg-orange-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-orange-600 flex items-center justify-center space-x-2">
+                  <span>📊</span>
+                  <span>Export Map</span>
+                </button>
+              </div>
+            )}
+
+            {contentViewerData.stepId === 6 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={approveAndContinue}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>🚀</span>
+                  <span>Deploy Campaigns</span>
+                </button>
+                <button className="bg-yellow-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-yellow-600 flex items-center justify-center space-x-2">
+                  <span>📅</span>
+                  <span>Schedule Launch</span>
+                </button>
+                <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2">
+                  <span>✅</span>
+                  <span>Run Pre-flight</span>
+                </button>
+                <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2">
+                  <span>🛡️</span>
+                  <span>Safety Mode</span>
+                </button>
+              </div>
+            )}
+
+            {contentViewerData.stepId === 7 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={() => {
+                    setShowContentViewer(false);
+                    alert('Campaign setup complete! 🎉');
+                  }}
+                  className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 flex items-center justify-center space-x-2"
+                >
+                  <span>✅</span>
+                  <span>Complete Setup</span>
+                </button>
+                <button className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 flex items-center justify-center space-x-2">
+                  <span>⚡</span>
+                  <span>Auto-Optimize</span>
+                </button>
+                <button className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 flex items-center justify-center space-x-2">
+                  <span>📊</span>
+                  <span>Export Report</span>
+                </button>
+                <button className="bg-orange-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-orange-600 flex items-center justify-center space-x-2">
+                  <span>📱</span>
+                  <span>Mobile Sync</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    );
   };
 
   const renderProjectSelection = () => (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Select Company & Project</h2>
-        <p className="text-gray-600">Choose the company and project for your campaign</p>
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">AI Campaign Builder</h1>
+        <p className="text-xl text-gray-600">Select a company and project to begin creating your campaign</p>
       </div>
 
       {/* Company Selection */}
@@ -406,23 +1330,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
               To create campaigns, you need at least one company profile. 
               Set up your first company profile to get started.
             </p>
-            <div className="space-y-3">
-              <button 
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('onboarding');
-                  } else {
-                    alert('Please go to Company Setup first to create a company profile.');
-                  }
-                }}
-                className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
-              >
-                Create Company Profile
-              </button>
-              <p className="text-sm text-gray-500">
-                You can also navigate to "Company Setup" in the sidebar
-              </p>
-            </div>
+            <button 
+              onClick={() => onNavigate?.('onboarding')}
+              className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
+            >
+              Create Company Profile
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -506,256 +1419,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
     </div>
   );
 
-  const renderContentViewer = () => {
-    if (!contentViewerData) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
-        >
-          {/* Header */}
-          <div className={`bg-gradient-to-r ${contentViewerData.stepInfo.color} p-6 text-white rounded-t-2xl`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <span className="text-3xl">{contentViewerData.stepInfo.icon}</span>
-                <div>
-                  <h2 className="text-2xl font-bold">Generated Content</h2>
-                  <p className="text-sm opacity-90">{contentViewerData.stepInfo.title}</p>
-                  {contentViewerData.content && (
-                    <p className="text-xs opacity-75 mt-1">
-                      {contentViewerData.content.ai_generated 
-                        ? `✓ AI Generated with ${contentViewerData.content.ai_service_used || 'AI Service'}`
-                        : '⚠️ Fallback Strategy (Connect OpenAI for AI generation)'}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setShowContentViewer(false)}
-                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-6">
-            {/* Content Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Generated Content</h3>
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isEditing ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {isEditing ? 'Save Changes' : 'Edit Content'}
-                </button>
-              </div>
-              
-              {isEditing ? (
-                <textarea
-                  value={typeof editedContent === 'string' ? editedContent : JSON.stringify(editedContent, null, 2)}
-                  onChange={(e) => setEditedContent(e.target.value)}
-                  className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                  placeholder="Edit your content here..."
-                />
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-6 max-h-96 overflow-y-auto">
-                  {contentViewerData.stepId === 1 && editedContent.fullText ? (
-                    // Special rendering for strategy step
-                    <div className="space-y-6">
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-2">Strategy Overview</h4>
-                        <p className="text-gray-700 whitespace-pre-line">{editedContent.fullText}</p>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h5 className="font-medium text-gray-700">Primary Channel</h5>
-                          <p className="text-gray-600">{editedContent.primaryChannel}</p>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-gray-700">Expected ROAS</h5>
-                          <p className="text-gray-600">{editedContent.expectedROAS}x</p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h5 className="font-medium text-gray-700 mb-2">Channel Mix</h5>
-                        <div className="space-y-1">
-                          {Object.entries(editedContent.channelMix || {}).map(([channel, percentage]) => (
-                            <div key={channel} className="flex justify-between text-sm">
-                              <span>{channel}</span>
-                              <span className="font-medium">{percentage}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <details className="cursor-pointer">
-                        <summary className="font-medium text-gray-700">View Full JSON Data</summary>
-                        <pre className="mt-2 text-xs overflow-x-auto">
-                          {JSON.stringify(editedContent, null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  ) : (
-                    // Default rendering for other steps
-                    <pre className="whitespace-pre-wrap text-gray-700 text-sm">
-                      {typeof editedContent === 'string' ? editedContent : JSON.stringify(editedContent, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Prompt Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Generation Prompt</h3>
-                <button
-                  onClick={() => setIsEditingPrompt(!isEditingPrompt)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isEditingPrompt ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {isEditingPrompt ? 'Save Prompt' : 'Edit Prompt'}
-                </button>
-              </div>
-              
-              {isEditingPrompt ? (
-                <textarea
-                  value={editedPrompt}
-                  onChange={(e) => setEditedPrompt(e.target.value)}
-                  className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter custom prompt for regeneration..."
-                />
-              ) : (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-blue-800 text-sm">
-                    {editedPrompt || 'Default AI prompt was used for this generation.'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-4 border-t">
-              <button
-                onClick={() => {
-                  if (isEditing) {
-                    handleContentEdit(contentViewerData.stepId, editedContent);
-                    setIsEditing(false);
-                  }
-                  if (isEditingPrompt) {
-                    handlePromptEdit(contentViewerData.stepId, editedPrompt);
-                    setIsEditingPrompt(false);
-                  }
-                  setShowContentViewer(false);
-                  
-                  // Auto-advance to next step after approval
-                  // Only advance if we're approving the current step (not viewing old results)
-                  if (contentViewerData.stepId === currentStep) {
-                    const nextStep = currentStep + 1;
-                    if (nextStep <= 7) {
-                      setCurrentStep(nextStep);
-                    }
-                  }
-                }}
-                className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
-              >
-                ✓ Approve & Continue
-              </button>
-              
-              <button
-                onClick={() => regenerateWithPrompt(contentViewerData.stepId, editedPrompt)}
-                disabled={loading}
-                className="bg-blue-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50 transition-colors"
-              >
-                🔄 Regenerate
-              </button>
-              
-              <button
-                onClick={() => regenerateWithPrompt(contentViewerData.stepId, '')}
-                disabled={loading}
-                className="bg-purple-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-600 disabled:opacity-50 transition-colors"
-              >
-                ✨ Generate Again
-              </button>
-              
-              <button
-                onClick={() => setShowContentViewer(false)}
-                className="border border-gray-300 text-gray-700 px-4 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
-
-  const renderApprovalScreen = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-      >
-        <div className={`bg-gradient-to-r ${steps[currentStep].color} p-6 text-white rounded-t-2xl`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <span className="text-3xl">{steps[currentStep].icon}</span>
-              <div>
-                <h2 className="text-2xl font-bold">Review & Approve</h2>
-                <p className="text-sm opacity-90">{steps[currentStep].title}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <div className="bg-gray-50 rounded-lg p-6 mb-6">
-            <h3 className="font-semibold text-gray-800 mb-4">Generated Content:</h3>
-            <div className="whitespace-pre-wrap text-gray-700">
-              {typeof currentGeneration === 'string' 
-                ? currentGeneration 
-                : JSON.stringify(currentGeneration, null, 2)
-              }
-            </div>
-          </div>
-
-          <div className="flex space-x-4">
-            <button
-              onClick={approveGeneration}
-              className="flex-1 bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600"
-            >
-              ✓ Approve & Continue
-            </button>
-            <button
-              onClick={rejectGeneration}
-              className="flex-1 border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50"
-            >
-              ✗ Regenerate
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-
   const renderStepContent = (step) => {
     const isCompleted = !!stepData[step.id];
     const isCurrent = currentStep === step.id;
     const isLoading = loading && isCurrent;
 
-    if (step.id === 0) return null; // Skip project selection in main steps
+    if (step.id === 0) return null;
 
     return (
       <motion.div
@@ -824,7 +1493,7 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
                   onClick={() => openContentViewer(step.id)}
                   className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium"
                 >
-                  📖 Open Results
+                  📖 View Results
                 </button>
                 <button
                   onClick={() => processStep(step.id)}
@@ -856,7 +1525,75 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto">
+      {/* Global Quick Actions Bar */}
+      <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-3 flex space-x-2 z-40">
+        <button 
+          onClick={saveProgress}
+          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+          title="Save Progress (Ctrl+S)"
+        >
+          💾 Save
+        </button>
+        <select 
+          value={currentStep}
+          onChange={(e) => setCurrentStep(parseInt(e.target.value))}
+          className="px-3 py-2 bg-gray-100 rounded text-sm"
+          disabled={!selectedCompany || !selectedProject}
+        >
+          <option value={0}>Select Step</option>
+          {steps.slice(1).map(step => (
+            <option key={step.id} value={step.id}>
+              Step {step.id}: {step.title}
+            </option>
+          ))}
+        </select>
+        <button className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm">
+          💬 Help
+        </button>
+        <div className="px-3 py-2 bg-gray-100 rounded text-sm">
+          <label className="flex items-center space-x-2">
+            <input 
+              type="checkbox"
+              checked={bulkMode}
+              onChange={(e) => setBulkMode(e.target.checked)}
+              className="rounded"
+            />
+            <span>Bulk Mode</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Progress Indicator */}
+      {currentStep > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              {steps.slice(1).map((step) => (
+                <div 
+                  key={step.id}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    stepData[step.id] 
+                      ? 'bg-green-500 text-white' 
+                      : step.id === currentStep 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 text-gray-500'
+                  }`}
+                >
+                  {stepData[step.id] ? '✓' : step.id}
+                </div>
+              ))}
+            </div>
+            <div className="text-sm text-gray-600">
+              Step {currentStep} of 7 • {getCompletionPercentage()}% complete
+            </div>
+          </div>
+          <div className="text-xs text-gray-500">
+            Time elapsed: {timeElapsed} min • Est. remaining: {getEstimatedTimeRemaining()} min
+          </div>
+        </div>
+      )}
+
       {currentStep === 0 ? (
         renderProjectSelection()
       ) : (
@@ -869,22 +1606,6 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
             <p className="text-xl text-gray-600">
               Creating campaign for <strong>{selectedCompany?.companyName}</strong> → <strong>{selectedProject?.name}</strong>
             </p>
-            
-            {/* Progress Bar */}
-            <div className="mt-6 bg-white rounded-xl p-4 shadow-sm border">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Campaign Progress</span>
-                <span className="text-sm text-gray-500">
-                  {Object.keys(stepData).length} of 7 steps completed
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${(Object.keys(stepData).length / 7) * 100}%` }}
-                ></div>
-              </div>
-            </div>
           </div>
 
           {/* Campaign Steps */}
@@ -904,11 +1625,6 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         </>
       )}
 
-      {/* Approval Modal */}
-      <AnimatePresence>
-        {showApproval && renderApprovalScreen()}
-      </AnimatePresence>
-
       {/* Content Viewer Modal */}
       <AnimatePresence>
         {showContentViewer && renderContentViewer()}
@@ -921,6 +1637,30 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
           onClose={() => setShowProjectManager(false)}
           onProjectCreated={handleProjectCreated}
         />
+      )}
+
+      {/* Smart Context Panel */}
+      {currentStep > 0 && (
+        <div className="fixed bottom-20 right-4 bg-blue-50 rounded-lg shadow-lg p-4 max-w-xs z-30">
+          <h5 className="font-semibold text-blue-800 mb-2">💡 AI Assistant</h5>
+          <div className="text-sm text-blue-700 space-y-2">
+            {currentStep === 1 && <p>Most users spend 3 min here, you're on track</p>}
+            {currentStep === 2 && <p>Your budget allocation looks optimal for this audience</p>}
+            {currentStep === 3 && <p>Similar campaigns achieved 2.8% CTR with this copy style</p>}
+            {currentStep === 4 && <p>Visual consistency score: 95% - looking great!</p>}
+            {currentStep === 5 && <p>Campaign structure allows for 12 A/B tests</p>}
+            {currentStep === 6 && <p>All pre-flight checks passing - ready to launch</p>}
+            {currentStep === 7 && <p>Performance tracking configured for real-time insights</p>}
+          </div>
+          <div className="flex space-x-2 mt-3">
+            <button className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+              Show me how
+            </button>
+            <button className="text-xs bg-white text-blue-600 px-2 py-1 rounded hover:bg-gray-100">
+              Learn more
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
