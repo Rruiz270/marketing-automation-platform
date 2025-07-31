@@ -659,9 +659,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
                   setShowContentViewer(false);
                   
                   // Auto-advance to next step after approval
-                  const nextStep = contentViewerData.stepId + 1;
-                  if (nextStep <= 7) {
-                    setCurrentStep(nextStep);
+                  // Only advance if we're approving the current step (not viewing old results)
+                  if (contentViewerData.stepId === currentStep) {
+                    const nextStep = currentStep + 1;
+                    if (nextStep <= 7) {
+                      setCurrentStep(nextStep);
+                    }
                   }
                 }}
                 className="bg-green-500 text-white px-4 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
