@@ -29,5 +29,15 @@
         }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "development": true
+    }
+  },
+  "github": {
+    "autoDeployment": false,
+    "enabled": true
+  }
 }
