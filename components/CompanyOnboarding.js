@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ProjectManager from './ProjectManager';
+import { emergencyBackupCompanyData, emergencyRecoverCompanyData } from '../lib/emergency-backup.js';
 
 const CompanyOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -43,6 +44,17 @@ const CompanyOnboarding = ({ onComplete }) => {
 
   const loadExistingProfile = async () => {
     try {
+      // EMERGENCY RECOVERY FIRST - Check browser storage
+      console.log('🚨 EMERGENCY: Checking for recovered company data...');
+      const emergencyData = await emergencyRecoverCompanyData('default_user');
+      if (emergencyData) {
+        console.log('🚨 EMERGENCY RECOVERY SUCCESSFUL!');
+        setExistingProfile(emergencyData);
+        setFormData(emergencyData);
+        setViewMode('existing');
+        return;
+      }
+
       const response = await fetch('/api/company-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,6 +126,10 @@ const CompanyOnboarding = ({ onComplete }) => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      // EMERGENCY BACKUP FIRST - Save to browser storage immediately
+      console.log('🚨 EMERGENCY: Saving company data to all locations...');
+      await emergencyBackupCompanyData(formData, 'default_user');
+      
       const response = await fetch('/api/company-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,7 +143,9 @@ const CompanyOnboarding = ({ onComplete }) => {
       const result = await response.json();
       
       if (result.success) {
-        alert('Company profile saved successfully!');
+        // Double backup after successful save
+        await emergencyBackupCompanyData(formData, 'default_user');
+        alert('✅ Company profile saved with EMERGENCY BACKUP protection!');
         onComplete();
       } else {
         alert(`Error: ${result.error || 'Failed to save profile'}`);

@@ -4,6 +4,7 @@ const path = require('path');
 
 // Import bulletproof storage system
 import storage from '../../lib/persistent-storage.js';
+import { emergencyBackupCompanyData, emergencyRecoverCompanyData } from '../../lib/emergency-backup.js';
 
 // Fallback in-memory storage
 let memoryStorage = {};
@@ -29,7 +30,17 @@ async function loadStoredProfiles() {
   try {
     console.log('🔍 Loading company profiles with bulletproof storage...');
     
-    // Try bulletproof storage first
+    // EMERGENCY RECOVERY FIRST
+    const emergencyData = await emergencyRecoverCompanyData();
+    if (emergencyData) {
+      memoryStorage = { 'default_user': emergencyData };
+      console.log('🚨 EMERGENCY RECOVERY SUCCESSFUL!');
+      // Immediately save to all other storages
+      await storage.store('company_profiles', memoryStorage);
+      return memoryStorage;
+    }
+
+    // Try bulletproof storage second
     const bulletproofData = await storage.retrieve('company_profiles');
     if (bulletproofData) {
       memoryStorage = bulletproofData;
@@ -85,6 +96,12 @@ async function saveStoredProfiles(profiles) {
   try {
     console.log('💾 Saving company profiles with bulletproof storage...');
     
+    // EMERGENCY BACKUP FIRST - ALWAYS SAVE TO ALL LOCATIONS
+    for (const userId in profiles) {
+      await emergencyBackupCompanyData(profiles[userId], userId);
+    }
+    console.log('🚨 EMERGENCY BACKUP COMPLETED FOR ALL USERS');
+
     // PRIMARY: Save to bulletproof storage (multiple layers)
     const bulletproofSuccess = await storage.store('company_profiles', profiles);
     if (bulletproofSuccess) {
