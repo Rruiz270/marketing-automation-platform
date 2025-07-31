@@ -104,6 +104,12 @@ export default async function handler(req, res) {
     
     if (!apiKey || !apiKey.startsWith('sk-')) {
       console.log('❌ No valid API key found from any source');
+      console.log('🔍 FINAL DEBUG - All sources checked:', {
+        env_OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'PRESENT' : 'MISSING',
+        env_direct_access: !!process.env['OPENAI_API_KEY'],
+        env_keys_with_openai: Object.keys(process.env).filter(k => k.toLowerCase().includes('openai')),
+        process_env_keys_count: Object.keys(process.env).length
+      });
       const fallbackStrategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
       return res.status(200).json({
         success: false,
