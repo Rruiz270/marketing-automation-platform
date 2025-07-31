@@ -1,55 +1,27 @@
-// Company Projects API - Manage projects under companies
-const fs = require('fs');
-const path = require('path');
+// Company Projects API - Vercel compatible (in-memory only)
+// Note: Data will not persist between deployments on Vercel
+// In production, this should connect to a database
 
-// Storage
+// In-memory storage for current session
 let memoryStorage = {};
 
-// Use environment variable for storage path or default to a persistent location
-const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
-const STORAGE_FILE = path.join(STORAGE_DIR, 'company-projects.json');
+// Since Vercel is serverless and stateless, we can't use file system
+// Data will reset on each deployment or function restart
+// This is a temporary solution - should be replaced with a database
 
-// Ensure storage directory exists
-function ensureStorageDir() {
-  try {
-    if (!fs.existsSync(STORAGE_DIR)) {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
-      console.log('Created projects storage directory:', STORAGE_DIR);
-    }
-  } catch (error) {
-    console.error('Error creating projects storage directory:', error);
-  }
-}
-
-// Load stored projects
+// Load stored projects (in-memory only)
 function loadStoredProjects() {
-  try {
-    ensureStorageDir();
-    
-    if (fs.existsSync(STORAGE_FILE)) {
-      const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-      const fileData = JSON.parse(data);
-      memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded company projects from file:', Object.keys(memoryStorage).length);
-    } else {
-      console.log('No existing projects file found');
-    }
-  } catch (error) {
-    console.error('Error loading company projects:', error);
-  }
+  // In Vercel, we can only use memory storage
+  // Data will be lost when function restarts
+  console.log('Loading company projects from memory:', Object.keys(memoryStorage).length);
   return memoryStorage;
 }
 
-// Save projects
+// Save projects (in-memory only)
 function saveStoredProjects(projects) {
   memoryStorage = projects;
-  try {
-    ensureStorageDir();
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(projects, null, 2));
-    console.log('Saved company projects to file:', Object.keys(projects).length, 'companies');
-  } catch (error) {
-    console.error('Error saving company projects:', error);
-  }
+  console.log('Saved company projects to memory:', Object.keys(projects).length, 'projects');
+  // Note: This data will be lost when the serverless function restarts
 }
 
 export default async function handler(req, res) {

@@ -1,57 +1,27 @@
-// Company Profile API with persistent storage
-const fs = require('fs');
-const path = require('path');
+// Company Profile API - Vercel compatible (in-memory only)
+// Note: Data will not persist between deployments on Vercel
+// In production, this should connect to a database
 
-// In-memory storage with persistent data structure
+// In-memory storage for current session
 let memoryStorage = {};
 
-// Use environment variable for storage path or default to a persistent location
-const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
-const STORAGE_FILE = path.join(STORAGE_DIR, 'company-profiles.json');
+// Since Vercel is serverless and stateless, we can't use file system
+// Data will reset on each deployment or function restart
+// This is a temporary solution - should be replaced with a database
 
-// Ensure storage directory exists
-function ensureStorageDir() {
-  try {
-    if (!fs.existsSync(STORAGE_DIR)) {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
-      console.log('Created storage directory:', STORAGE_DIR);
-    }
-  } catch (error) {
-    console.error('Error creating storage directory:', error);
-  }
-}
-
-// Load stored profiles
+// Load stored profiles (in-memory only)
 function loadStoredProfiles() {
-  try {
-    ensureStorageDir();
-    
-    if (fs.existsSync(STORAGE_FILE)) {
-      const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-      const fileData = JSON.parse(data);
-      memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded company profiles from file:', Object.keys(memoryStorage).length);
-    } else {
-      console.log('No existing company profiles file found');
-    }
-  } catch (error) {
-    console.error('Error loading company profiles:', error);
-  }
-  
+  // In Vercel, we can only use memory storage
+  // Data will be lost when function restarts
+  console.log('Loading company profiles from memory:', Object.keys(memoryStorage).length);
   return memoryStorage;
 }
 
-// Save profiles
+// Save profiles (in-memory only)
 function saveStoredProfiles(profiles) {
   memoryStorage = profiles;
-  
-  try {
-    ensureStorageDir();
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(profiles, null, 2));
-    console.log('Saved company profiles to file:', Object.keys(profiles).length, 'profiles');
-  } catch (error) {
-    console.error('Error saving company profiles:', error);
-  }
+  console.log('Saved company profiles to memory:', Object.keys(profiles).length, 'profiles');
+  // Note: This data will be lost when the serverless function restarts
 }
 
 export default async function handler(req, res) {
@@ -148,6 +118,10 @@ export default async function handler(req, res) {
 
       case 'list_all':
         const allCompanies = Object.values(storedProfiles);
+        console.log('Company Profile API: list_all called');
+        console.log('Company Profile API: storedProfiles keys:', Object.keys(storedProfiles));
+        console.log('Company Profile API: allCompanies length:', allCompanies.length);
+        console.log('Company Profile API: allCompanies:', allCompanies);
         
         return res.status(200).json({
           success: true,
