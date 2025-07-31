@@ -1,11 +1,14 @@
-// Company Profile API with persistent storage
+// Company Profile API with BULLETPROOF persistent storage
 const fs = require('fs');
 const path = require('path');
 
-// In-memory storage with persistent data structure
+// Import bulletproof storage system
+import storage from '../../lib/persistent-storage.js';
+
+// Fallback in-memory storage
 let memoryStorage = {};
 
-// Use environment variable for storage path or default to a persistent location
+// Multiple storage locations for maximum redundancy
 const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
 const STORAGE_FILE = path.join(STORAGE_DIR, 'company-profiles.json');
 
@@ -21,40 +24,74 @@ function ensureStorageDir() {
   }
 }
 
-// Load stored profiles
-function loadStoredProfiles() {
+// Load stored profiles with BULLETPROOF recovery
+async function loadStoredProfiles() {
   try {
+    console.log('🔍 Loading company profiles with bulletproof storage...');
+    
+    // Try bulletproof storage first
+    const bulletproofData = await storage.retrieve('company_profiles');
+    if (bulletproofData) {
+      memoryStorage = bulletproofData;
+      console.log('✅ Loaded company profiles from bulletproof storage:', Object.keys(memoryStorage).length);
+      return memoryStorage;
+    }
+    
+    // Fallback to traditional file storage
     ensureStorageDir();
     
     if (fs.existsSync(STORAGE_FILE)) {
       const data = fs.readFileSync(STORAGE_FILE, 'utf8');
       const fileData = JSON.parse(data);
       memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('✅ Loaded company profiles from file:', Object.keys(memoryStorage).length);
+      console.log('✅ Loaded company profiles from file (fallback):', Object.keys(memoryStorage).length);
+      
+      // Immediately save to bulletproof storage
+      await storage.store('company_profiles', memoryStorage);
+      
     } else {
-      console.log('⚠️ No existing company profiles file found - creating new storage');
-      // Create empty file to ensure it exists
-      fs.writeFileSync(STORAGE_FILE, JSON.stringify({}, null, 2));
+      console.log('⚠️ No existing company profiles found - creating new storage');
+      memoryStorage = {};
+      // Initialize bulletproof storage
+      await storage.store('company_profiles', memoryStorage);
+      
+      // Create traditional file as backup
+      try {
+        fs.writeFileSync(STORAGE_FILE, JSON.stringify({}, null, 2));
+      } catch (fileError) {
+        console.warn('Failed to create traditional backup file:', fileError.message);
+      }
     }
   } catch (error) {
     console.error('❌ Error loading company profiles:', error);
-    // Try to create backup storage
+    memoryStorage = {};
+    
+    // Try to initialize empty bulletproof storage
     try {
-      fs.writeFileSync(STORAGE_FILE, JSON.stringify({}, null, 2));
-      console.log('✅ Created new empty storage file');
-    } catch (backupError) {
-      console.error('❌ Failed to create backup storage:', backupError);
+      await storage.store('company_profiles', memoryStorage);
+      console.log('✅ Initialized empty bulletproof storage');
+    } catch (storageError) {
+      console.error('❌ Failed to initialize bulletproof storage:', storageError);
     }
   }
   
   return memoryStorage;
 }
 
-// Save profiles
-function saveStoredProfiles(profiles) {
+// Save profiles with BULLETPROOF persistence
+async function saveStoredProfiles(profiles) {
   memoryStorage = profiles;
   
   try {
+    console.log('💾 Saving company profiles with bulletproof storage...');
+    
+    // PRIMARY: Save to bulletproof storage (multiple layers)
+    const bulletproofSuccess = await storage.store('company_profiles', profiles);
+    if (bulletproofSuccess) {
+      console.log('✅ Saved company profiles to bulletproof storage:', Object.keys(profiles).length, 'profiles');
+    }
+    
+    // BACKUP: Traditional file storage
     ensureStorageDir();
     
     // Create backup first
@@ -65,11 +102,22 @@ function saveStoredProfiles(profiles) {
     
     // Write new data
     fs.writeFileSync(STORAGE_FILE, JSON.stringify(profiles, null, 2));
-    console.log('✅ Saved company profiles to file:', Object.keys(profiles).length, 'profiles');
+    console.log('✅ Saved company profiles to traditional file storage');
     
-    // Also save to timestamped backup
+    // Create timestamped backup
     const localBackup = path.join(STORAGE_DIR, `profiles_${Date.now()}.json`);
     fs.writeFileSync(localBackup, JSON.stringify(profiles, null, 2));
+    
+    // EXTRA BACKUP: Save to public directory (accessible via HTTP)
+    try {
+      const publicBackup = path.join(process.cwd(), 'public', 'company_profiles_backup.json');
+      fs.writeFileSync(publicBackup, JSON.stringify(profiles, null, 2));
+      console.log('✅ Created public backup');
+    } catch (publicError) {
+      console.warn('Failed to create public backup:', publicError.message);
+    }
+    
+    return true;
     
   } catch (error) {
     console.error('❌ Error saving company profiles:', error);
@@ -79,11 +127,12 @@ function saveStoredProfiles(profiles) {
     if (fs.existsSync(backupFile)) {
       try {
         fs.copyFileSync(backupFile, STORAGE_FILE);
-        console.log('✅ Restored from backup');
+        console.log('✅ Restored from traditional backup');
       } catch (restoreError) {
         console.error('❌ Failed to restore from backup:', restoreError);
       }
     }
+    return false;
   }
 }
 
@@ -96,8 +145,8 @@ export default async function handler(req, res) {
     const { action, user_id, data } = req.body;
     console.log('Company Profile API:', { action, user_id });
     
-    // Load existing profiles
-    let storedProfiles = loadStoredProfiles();
+    // Load existing profiles with bulletproof recovery
+    let storedProfiles = await loadStoredProfiles();
 
     switch (action) {
       case 'save':
@@ -124,7 +173,7 @@ export default async function handler(req, res) {
           updated_at: new Date().toISOString()
         };
 
-        saveStoredProfiles(storedProfiles);
+        await saveStoredProfiles(storedProfiles);
 
         return res.status(200).json({
           success: true,
@@ -151,7 +200,7 @@ export default async function handler(req, res) {
 
         if (storedProfiles[user_id]) {
           delete storedProfiles[user_id];
-          saveStoredProfiles(storedProfiles);
+          await saveStoredProfiles(storedProfiles);
           
           return res.status(200).json({
             success: true,
