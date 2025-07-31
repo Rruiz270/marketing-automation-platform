@@ -6,11 +6,51 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { strategy, companyProfile, ai_service, ai_service_name } = req.body;
+  const { strategy, companyProfile, projectData, companyData, connectedAIs, ai_service, ai_service_name } = req.body;
+  
+  console.log('🎯 Media Planner API called:', {
+    hasStrategy: !!strategy,
+    hasCompanyData: !!(companyData || companyProfile),
+    connectedAIsCount: connectedAIs?.length || 0
+  });
 
   try {
+    // Get API key from multiple sources (same as strategy translator)
+    let apiKey = null;
+    
+    // Source 1: Environment variable
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
+      apiKey = process.env.OPENAI_API_KEY;
+      console.log('✅ Media Planner: Using environment variable API key');
+    }
+    
+    // Source 2: Connected AIs
+    if (!apiKey && connectedAIs && connectedAIs.length > 0) {
+      const openaiService = connectedAIs.find(ai => 
+        ai.service === 'openai' && ai.api_key && ai.api_key.startsWith('sk-')
+      );
+      if (openaiService) {
+        apiKey = openaiService.api_key;
+        console.log('✅ Media Planner: Using connected AI API key');
+      }
+    }
+    
+    if (!apiKey || !apiKey.startsWith('sk-')) {
+      console.log('❌ Media Planner: No valid API key found');
+      const fallbackMediaPlan = generateFallbackMediaPlan(strategy, companyData || companyProfile);
+      return res.status(200).json({
+        success: true,
+        mediaPlan: fallbackMediaPlan,
+        metadata: {
+          generated_at: new Date().toISOString(),
+          ai_service: 'Fallback Generator',
+          optimization_score: 75
+        }
+      });
+    }
+
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || 'demo-key'
+      apiKey: apiKey
     });
 
     const mediaPlanPrompt = `
@@ -86,12 +126,14 @@ Provide specific, actionable recommendations for maximizing campaign performance
     let mediaPlan;
 
     try {
+      console.log('🎯 Media Planner: Making OpenAI API call...');
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-3.5-turbo", // Changed from gpt-4 to match working strategy API
         messages: [{ role: "user", content: mediaPlanPrompt }],
         max_tokens: 2500,
         temperature: 0.6
       });
+      console.log('✅ Media Planner: OpenAI API call successful');
 
       const planText = response.choices[0].message.content;
       
