@@ -31,14 +31,15 @@ export default async function handler(req, res) {
     fullRequest: req.body
   });
 
-  // DEBUG: Log all environment variable states
-  console.log('🔍 Environment Variables Debug:', {
+  // DEBUG: Log all environment variable states - UPDATED
+  console.log('🔍 Environment Variables Debug (with new env var):', {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Present (${process.env.OPENAI_API_KEY.substring(0, 7)}...)` : 'Missing',
     OPENAI_KEY: process.env.OPENAI_KEY ? `Present (${process.env.OPENAI_KEY.substring(0, 7)}...)` : 'Missing',
     NODE_ENV: process.env.NODE_ENV,
     VERCEL: process.env.VERCEL,
     VERCEL_ENV: process.env.VERCEL_ENV,
-    totalEnvVars: Object.keys(process.env).length
+    totalEnvVars: Object.keys(process.env).length,
+    timestamp: new Date().toISOString()
   });
 
   // Use new format if available, fall back to old format
@@ -94,8 +95,15 @@ export default async function handler(req, res) {
         error: 'No valid OpenAI API key configured',
         details: {
           error_type: 'Missing API Key',
-          env_key: !!process.env.OPENAI_API_KEY,
-          connected_ais_available: connectedAIs?.length || 0
+          debug_info: {
+            env_OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Present (${process.env.OPENAI_API_KEY.substring(0, 7)}...)` : 'Missing',
+            env_OPENAI_KEY: process.env.OPENAI_KEY ? `Present (${process.env.OPENAI_KEY.substring(0, 7)}...)` : 'Missing',
+            env_NODE_ENV: process.env.NODE_ENV,
+            env_VERCEL: process.env.VERCEL,
+            total_env_vars: Object.keys(process.env).length,
+            connected_ais_count: connectedAIs?.length || 0,
+            connected_ais_data: connectedAIs?.map(ai => ({ service: ai.service, has_key: !!ai.api_key })) || []
+          }
         },
         result: fallbackStrategy
       });
