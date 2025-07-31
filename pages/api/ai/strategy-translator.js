@@ -1,5 +1,6 @@
 // AI Strategy Translator - Transform business objectives into paid media strategy
 import OpenAI from 'openai';
+import { apiKeyManager } from '../../../lib/api-key-manager.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -38,66 +39,23 @@ export default async function handler(req, res) {
   const targetAudience = audience || project?.targetAudience || company?.targetPublic || 'General audience';
 
   try {
-    // Get user's API key with multiple fallbacks
-    let apiKey = process.env.OPENAI_API_KEY;
+    // Use bulletproof API key manager
+    console.log('🔑 Using bulletproof API key manager...');
+    const apiKey = apiKeyManager.getApiKey(connectedAIs);
+    const keyInfo = apiKeyManager.getKeyInfo(connectedAIs);
     
-    // Log the environment variable status for debugging
-    console.log('Environment variable check:', {
-      hasEnvKey: !!process.env.OPENAI_API_KEY,
-      envKeyStart: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 7) + '...' : 'none'
-    });
+    console.log('API Key Manager Info:', keyInfo);
     
-    // Try to get user's connected API key
-    if (connectedAIs && connectedAIs.length > 0) {
-      console.log('Connected AIs received:', connectedAIs);
-      
-      // Check if we have OpenAI in the connected services
-      const openaiService = connectedAIs.find(ai => 
-        ai.service === 'openai' || 
-        ai.service_name === 'OpenAI GPT-4' ||
-        (ai.api_key && ai.api_key.startsWith('sk-'))
-      );
-      
-      if (openaiService && openaiService.api_key) {
-        apiKey = openaiService.api_key;
-        console.log('Using OpenAI key from connected services');
-      } else {
-        // Try loading from storage as fallback
-        const fs = require('fs');
-        const path = require('path');
-        const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
-        const STORAGE_FILE = path.join(STORAGE_DIR, 'ai-keys-storage.json');
-        
-        try {
-          if (fs.existsSync(STORAGE_FILE)) {
-            const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-            const keysData = JSON.parse(data);
-            const userKeys = keysData['default_user'];
-            
-            if (userKeys) {
-              const openaiKey = userKeys.find(k => k.service === 'openai');
-              if (openaiKey) {
-                apiKey = openaiKey.api_key;
-                console.log('Using OpenAI key from storage');
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error loading user keys from storage:', error);
-        }
-      }
-    }
-    
-    if (!apiKey || apiKey === 'demo-key') {
-      console.log('No valid API key found, using fallback strategy');
+    if (!apiKey || !apiKeyManager.isValidApiKey(apiKey)) {
+      console.log('❌ No valid API key found from any source');
       const fallbackStrategy = generateFallbackStrategy(campaignObjective, campaignBudget, targetAudience, company, project);
       return res.status(200).json({
         success: false,
         error: 'No valid OpenAI API key configured',
         details: {
           error_type: 'Missing API Key',
-          connected_ais_available: connectedAIs?.length || 0,
-          storage_checked: true
+          keyInfo: keyInfo,
+          connected_ais_available: connectedAIs?.length || 0
         },
         result: fallbackStrategy
       });
