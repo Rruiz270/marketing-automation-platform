@@ -164,12 +164,29 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
   const loadCompanies = async () => {
     try {
-      const recovered = await emergencyRecoverCompanyData();
-      if (recovered && recovered.length > 0) {
-        setCompanies(recovered);
+      console.log('Campaign Builder: Loading companies...');
+      const response = await fetch('/api/company-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list_all'
+        })
+      });
+      
+      console.log('Campaign Builder: Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Campaign Builder: API response:', data);
+        console.log('Campaign Builder: Companies array:', data.companies);
+        console.log('Campaign Builder: Companies length:', data.companies?.length);
+        setCompanies(data.companies || []);
+      } else {
+        const errorData = await response.text();
+        console.error('Campaign Builder: Failed to load companies:', response.status, errorData);
       }
     } catch (error) {
-      console.error('Error loading companies:', error);
+      console.error('Campaign Builder: Error loading companies:', error);
     }
   };
 
