@@ -1,6 +1,7 @@
 // Company Profile API - Vercel compatible (in-memory only)
 // Note: Data will not persist between deployments on Vercel
 // In production, this should connect to a database
+// Updated: 2024-07-31 - Debugging company loading issue
 
 // In-memory storage for current session
 let memoryStorage = {};
