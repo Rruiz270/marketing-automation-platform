@@ -38,8 +38,14 @@ export default async function handler(req, res) {
   const targetAudience = audience || project?.targetAudience || company?.targetPublic || 'General audience';
 
   try {
-    // Get user's API key
+    // Get user's API key with multiple fallbacks
     let apiKey = process.env.OPENAI_API_KEY;
+    
+    // Log the environment variable status for debugging
+    console.log('Environment variable check:', {
+      hasEnvKey: !!process.env.OPENAI_API_KEY,
+      envKeyStart: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 7) + '...' : 'none'
+    });
     
     // Try to get user's connected API key
     if (connectedAIs && connectedAIs.length > 0) {
