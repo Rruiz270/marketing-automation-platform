@@ -247,6 +247,10 @@ export default async function handler(req, res) {
 
       case 'list_all':
         const allCompanies = Object.values(storedProfiles);
+        console.log('Company Profile API: list_all called');
+        console.log('Company Profile API: storedProfiles keys:', Object.keys(storedProfiles));
+        console.log('Company Profile API: allCompanies length:', allCompanies.length);
+        console.log('Company Profile API: allCompanies:', allCompanies);
         
         return res.status(200).json({
           success: true,
