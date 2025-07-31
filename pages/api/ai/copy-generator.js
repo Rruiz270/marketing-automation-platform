@@ -290,18 +290,145 @@ function generateFallbackCopy(channelName, project, company) {
   const fallbackCopy = {
     'Google Ads': {
       headlines: [
+        `${companyName} - Quality English`,
+        `Learn English Online`,
+        `Professional English Course`,
+        `English for Executives`,
+        `Career English Training`
+      ],
+      descriptions: [
+        `Transform your career with professional English courses from ${companyName}`,
+        `Learn English online with flexible schedules and proven results`,
+        `Join thousands of professionals improving their English skills`
+      ],
+      ctas: [
+        'Learn More',
+        'Start Today',
+        'Get Free Trial',
+        'Book Consultation',
+        'Join Now'
+      ],
+      funnel_stages: {
+        awareness: {
+          headlines: [
+            'English for Professionals',
+            'Career Growth English',
+            'Business English Course'
+          ],
+          descriptions: [
+            'Discover how English can boost your career',
+            'Professional English training for executives'
+          ],
+          ctas: ['Learn More', 'Discover How', 'Find Out More']
+        },
+        consideration: {
+          headlines: [
+            `Why Choose ${companyName}`,
+            'Proven English Results',
+            'Flexible Online Learning'
+          ],
+          descriptions: [
+            'Join thousands of successful professionals',
+            'Flexible schedule, proven methodology'
+          ],
+          ctas: ['Start Free Trial', 'See Results', 'Book Demo']
+        },
+        conversion: {
+          headlines: [
+            'Start Learning Today',
+            'Limited Time Offer',
+            'Join Now - Special Price'
+          ],
+          descriptions: [
+            'Begin your English transformation today',
+            'Special enrollment period - act now'
+          ],
+          ctas: ['Enroll Now', 'Get Started', 'Join Today']
+        }
+      },
+      channel_specific: {
+        extensions: {
+          sitelinks: [
+            'Course Info',
+            'Free Assessment', 
+            'Student Success',
+            'Contact Us'
+          ],
+          callouts: [
+            'Proven Results',
+            'Flexible Schedule',
+            'Professional Focus',
+            'Expert Teachers'
+          ]
+        }
+      }
+    },
+    'Facebook Ads': {
+      headlines: [
         'Professional English Course',
-        'Business English Training',
+        'Business English Training', 
         'Corporate English Classes',
         'Learn English Online',
         'English for Career Growth'
       ],
       descriptions: [
-        '60+ years teaching English. Official Brazil-USA Binational Center.',
-        'Flexible online + in-person classes. Corporate training available.',
-        'Government recognized English courses. Professional development focus.'
+        `${companyName} - Transform your career with professional English`,
+        'Flexible online classes that fit your schedule',
+        'Join thousands of professionals improving their English'
       ],
-      ctas: ['Learn More', 'Get Started', 'Free Assessment']
+      ctas: ['Learn More', 'Get Started', 'Free Assessment'],
+      funnel_stages: {
+        awareness: {
+          headlines: [
+            'Want Better Career Opportunities?',
+            'English Opens Doors 🚪',
+            'Professional Growth Awaits'
+          ],
+          descriptions: [
+            'Discover how English can transform your career',
+            'See why professionals choose our English courses'
+          ],
+          ctas: ['Learn More', 'Discover How', 'See Results']
+        },
+        consideration: {
+          headlines: [
+            `Why Choose ${companyName}? 🤔`,
+            'Proven Results & Flexibility',
+            'Professional English Experts'
+          ],
+          descriptions: [
+            'Flexible schedule + proven methodology = success',
+            'Join thousands who advanced their careers with us'
+          ],
+          ctas: ['Start Free Trial', 'Book Demo', 'See Proof']
+        },
+        conversion: {
+          headlines: [
+            'Ready to Transform Your Career? 🚀',
+            'Limited Spots Available',
+            'Start Your Journey Today'
+          ],
+          descriptions: [
+            'Begin your English transformation now',
+            'Special enrollment - limited time offer'
+          ],
+          ctas: ['Enroll Now', 'Get Started', 'Claim Spot']
+        }
+      },
+      channel_specific: {
+        formats: {
+          stories: [
+            'Quick English Tips 💡',
+            'Success Stories 🌟',
+            'Behind the Scenes 📚'
+          ],
+          reels: [
+            'Pronunciation Tips 🗣️',
+            'Grammar Hacks ✍️',
+            'Student Success 🎉'
+          ]
+        }
+      }
     },
     'Facebook/Instagram': {
       headlines: [
