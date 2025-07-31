@@ -6,31 +6,80 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { adCopy, mediaPlan, companyProfile, ai_service, ai_service_name } = req.body;
+  const { companyData, projectData, previousSteps, connectedAIs, userId } = req.body;
+  
+  console.log('🎨 Creative Generator API called:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    connectedAIsCount: connectedAIs?.length || 0,
+    hasPreviousSteps: !!previousSteps
+  });
+
+  // Use company and project data directly
+  const company = companyData;
+  const project = projectData;
+  const strategy = previousSteps[1]?.result;
+  const mediaPlan = previousSteps[2]?.result;
+  const adCopy = previousSteps[3]?.result;
 
   try {
+    // Get API key from multiple sources (same as other APIs)
+    let apiKey = null;
+    
+    // Source 1: Environment variable
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
+      apiKey = process.env.OPENAI_API_KEY;
+      console.log('✅ Creative Generator: Using environment variable API key');
+    }
+    
+    // Source 2: Connected AIs
+    if (!apiKey && connectedAIs && connectedAIs.length > 0) {
+      const openaiService = connectedAIs.find(ai => 
+        ai.service === 'openai' && ai.api_key && ai.api_key.startsWith('sk-')
+      );
+      if (openaiService) {
+        apiKey = openaiService.api_key;
+        console.log('✅ Creative Generator: Using connected AI API key');
+      }
+    }
+    
+    if (!apiKey || !apiKey.startsWith('sk-')) {
+      console.log('❌ Creative Generator: No valid API key found');
+      const fallbackCreatives = generateFallbackCreatives(project, company);
+      return res.status(200).json({
+        success: true,
+        result: fallbackCreatives,
+        metadata: {
+          generated_at: new Date().toISOString(),
+          ai_service: 'Fallback Generator'
+        }
+      });
+    }
+
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || 'demo-key'
+      apiKey: apiKey
     });
 
     const creatives = {
       formats: [],
-      designGuidelines: generateDesignGuidelines(companyProfile),
-      assetLibrary: generateAssetLibrary(companyProfile),
-      brandElements: generateBrandElements(companyProfile),
+      designGuidelines: generateDesignGuidelines(company),
+      assetLibrary: generateAssetLibrary(company),
+      brandElements: generateBrandElements(company),
       variations: []
     };
 
-    // Generate creative formats for each channel
-    for (const channel of mediaPlan.channels || []) {
+    // Generate creative formats for each channel (use project platforms if no mediaPlan)
+    const channels = mediaPlan?.channels || project?.platforms?.map(platform => ({ name: platform })) || [{ name: 'Google Ads' }, { name: 'Facebook Ads' }];
+    
+    for (const channel of channels) {
       const channelFormats = getChannelCreativeFormats(channel.name);
       
       for (const format of channelFormats) {
         const creativeBrief = await generateCreativeBrief(
           format, 
           channel, 
-          adCopy[channel.name], 
-          companyProfile, 
+          adCopy?.adCopy?.[channel.name], 
+          company, 
           openai
         );
         
@@ -44,17 +93,21 @@ export default async function handler(req, res) {
     }
 
     // Generate design system
-    creatives.designSystem = await generateDesignSystem(companyProfile, openai);
+    creatives.designSystem = await generateDesignSystem(company, openai);
     
     // Generate creative calendar
     creatives.productionCalendar = generateProductionCalendar(creatives.formats);
 
     res.status(200).json({
       success: true,
-      creatives,
+      result: {
+        ...creatives,
+        company: company?.companyName || 'Company',
+        project: project?.name || 'Campaign'
+      },
       metadata: {
         generated_at: new Date().toISOString(),
-        ai_service: ai_service_name || 'OpenAI GPT-4',
+        ai_service: 'AI Creative Generator',
         total_formats: creatives.formats.length,
         production_timeline: '7-10 business days'
       }
@@ -65,7 +118,7 @@ export default async function handler(req, res) {
     res.status(500).json({ 
       success: false,
       error: 'Creative generation failed',
-      fallback_creatives: generateFallbackCreatives(mediaPlan, companyProfile)
+      result: generateFallbackCreatives(project, company)
     });
   }
 }
@@ -200,12 +253,12 @@ function getChannelCreativeFormats(channelName) {
   return formatMap[channelName] || formatMap['Google Ads'];
 }
 
-async function generateCreativeBrief(format, channel, channelCopy, companyProfile, openai) {
+async function generateCreativeBrief(format, channel, channelCopy, company, openai) {
   const briefPrompt = `
 As a creative director, write a detailed creative brief for ${format.name} ads for:
 
-Company: ${companyProfile?.companyName || 'Alumni English School'}
-Industry: ${companyProfile?.industry || 'Education'}
+Company: ${company?.companyName || 'Company'}
+Industry: ${company?.industry || 'Education'}
 Platform: ${format.platform}
 Format: ${format.name} (${format.dimensions})
 
@@ -407,7 +460,7 @@ Focus: ${getVariationTestingFocus(variation)}
 Platform: Optimized for ${format.platform}`;
 }
 
-function generateDesignGuidelines(companyProfile) {
+function generateDesignGuidelines(company) {
   return {
     brandColors: {
       primary: '#003366', // Navy blue - trust and professionalism
@@ -435,7 +488,7 @@ function generateDesignGuidelines(companyProfile) {
   };
 }
 
-function generateAssetLibrary(companyProfile) {
+function generateAssetLibrary(company) {
   return {
     photography: [
       'Professional headshots - diverse ages and backgrounds',
@@ -460,7 +513,7 @@ function generateAssetLibrary(companyProfile) {
   };
 }
 
-function generateBrandElements(companyProfile) {
+function generateBrandElements(company) {
   return {
     keyMessages: [
       '60+ Years of Excellence',
@@ -486,9 +539,9 @@ function generateBrandElements(companyProfile) {
   };
 }
 
-async function generateDesignSystem(companyProfile, openai) {
+async function generateDesignSystem(company, openai) {
   const designSystemPrompt = `
-Create a comprehensive design system for ${companyProfile?.companyName || 'Alumni English School'} advertising campaigns.
+Create a comprehensive design system for ${company?.companyName || 'Company'} advertising campaigns.
 
 Company Context:
 - 60+ years in English education
@@ -536,8 +589,8 @@ Return a structured design system that ensures consistent, professional advertis
 
     return {
       guidelines: response.choices[0].message.content,
-      colorPalette: generateDesignGuidelines(companyProfile).brandColors,
-      typography: generateDesignGuidelines(companyProfile).typography,
+      colorPalette: generateDesignGuidelines(company).brandColors,
+      typography: generateDesignGuidelines(company).typography,
       spacing: {
         small: '8px',
         medium: '16px', 
@@ -551,7 +604,7 @@ Return a structured design system that ensures consistent, professional advertis
       }
     };
   } catch (error) {
-    return generateDesignGuidelines(companyProfile);
+    return generateDesignGuidelines(company);
   }
 }
 
@@ -611,7 +664,7 @@ function generateFallbackBrief(format, companyProfile) {
   };
 }
 
-function generateFallbackCreatives(mediaPlan, companyProfile) {
+function generateFallbackCreatives(project, company) {
   return {
     formats: [
       {
@@ -623,7 +676,7 @@ function generateFallbackCreatives(mediaPlan, companyProfile) {
         concept: 'Professional English education with heritage emphasis'
       }
     ],
-    designGuidelines: generateDesignGuidelines(companyProfile),
+    designGuidelines: generateDesignGuidelines(company),
     productionCalendar: {
       timeline: 'Standard 2-week production cycle',
       totalFormats: 1
