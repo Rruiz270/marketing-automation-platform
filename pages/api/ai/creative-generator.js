@@ -287,7 +287,7 @@ BRAND INTEGRATION:
 - Brazil-USA connection visual elements
 
 AUDIENCE APPEAL:
-- Visual elements that resonate with ${companyProfile?.targetPublic || 'professionals'}
+- Visual elements that resonate with ${company?.targetPublic || 'professionals'}
 - Professional vs approachable balance
 - Cultural considerations for Brazil market
 
@@ -317,7 +317,7 @@ Return a comprehensive brief that guides designers to create high-performing ${f
     return parseCreativeBrief(response.choices[0].message.content, format);
   } catch (error) {
     console.error('Creative brief generation error:', error);
-    return generateFallbackBrief(format, companyProfile);
+    return generateFallbackBrief(format, company);
   }
 }
 
@@ -653,7 +653,7 @@ function generateProductionCalendar(formats) {
   };
 }
 
-function generateFallbackBrief(format, companyProfile) {
+function generateFallbackBrief(format, company) {
   return {
     concept: 'Professional and trustworthy design emphasizing heritage and quality',
     composition: `Clean layout optimized for ${format.dimensions} with clear hierarchy`,
