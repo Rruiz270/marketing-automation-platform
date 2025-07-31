@@ -31,6 +31,16 @@ export default async function handler(req, res) {
     fullRequest: req.body
   });
 
+  // DEBUG: Log all environment variable states
+  console.log('🔍 Environment Variables Debug:', {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Present (${process.env.OPENAI_API_KEY.substring(0, 7)}...)` : 'Missing',
+    OPENAI_KEY: process.env.OPENAI_KEY ? `Present (${process.env.OPENAI_KEY.substring(0, 7)}...)` : 'Missing',
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    totalEnvVars: Object.keys(process.env).length
+  });
+
   // Use new format if available, fall back to old format
   const company = companyData || companyProfile;
   const project = projectData;
