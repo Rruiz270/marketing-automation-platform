@@ -86,6 +86,25 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   ];
 
   useEffect(() => {
+    // Clean up any corrupted project backups with default projects
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('EMERGENCY_PROJECTS_BACKUP');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.projectsData && parsed.projectsData.some(p => p.isDefault)) {
+            console.log('🧹 Cleaning corrupted project backup with default projects');
+            localStorage.removeItem('EMERGENCY_PROJECTS_BACKUP');
+            sessionStorage.removeItem('EMERGENCY_PROJECTS_SESSION');
+          }
+        }
+      } catch (e) {
+        console.log('🧹 Cleaning corrupted backup data');
+        localStorage.removeItem('EMERGENCY_PROJECTS_BACKUP');
+        sessionStorage.removeItem('EMERGENCY_PROJECTS_SESSION');
+      }
+    }
+    
     loadCompanies();
   }, []);
 
@@ -130,12 +149,16 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
   const loadProjects = async (companyId) => {
     try {
-      // First try to recover from backup
+      // First try to recover from backup (only user-created projects)
       const emergencyProjectData = await emergencyRecoverProjectData('default_user');
       if (emergencyProjectData && emergencyProjectData.length > 0) {
-        console.log('✅ Projects recovered from backup');
-        setProjects(emergencyProjectData);
-        return;
+        // Filter out any default projects that might be in backup
+        const userProjects = emergencyProjectData.filter(project => !project.isDefault);
+        if (userProjects.length > 0) {
+          console.log('✅ User projects recovered from backup');
+          setProjects(userProjects);
+          return;
+        }
       }
 
       // Load from API
@@ -151,9 +174,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       const data = await response.json();
       if (data.success) {
         setProjects(data.projects || []);
-        // Backup loaded projects
+        // Backup loaded projects (only user-created ones)
         if (data.projects && data.projects.length > 0) {
-          await emergencyBackupProjectData(data.projects, 'default_user');
+          const userProjects = data.projects.filter(project => !project.isDefault);
+          if (userProjects.length > 0) {
+            await emergencyBackupProjectData(userProjects, 'default_user');
+          }
         }
       }
     } catch (error) {
