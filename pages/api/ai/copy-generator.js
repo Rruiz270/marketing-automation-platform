@@ -6,34 +6,88 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { strategy, mediaPlan, companyProfile, ai_service, ai_service_name } = req.body;
+  const { companyData, projectData, previousSteps, connectedAIs, userId } = req.body;
+  
+  console.log('🎯 Copy Generator API called:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    connectedAIsCount: connectedAIs?.length || 0,
+    hasPreviousSteps: !!previousSteps
+  });
+
+  // Use company and project data directly (like other APIs)
+  const company = companyData;
+  const project = projectData;
+  const strategy = previousSteps[1]?.result;
+  const mediaPlan = previousSteps[2]?.result;
 
   try {
+    // Get API key from multiple sources (same as other APIs)
+    let apiKey = null;
+    
+    // Source 1: Environment variable
+    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
+      apiKey = process.env.OPENAI_API_KEY;
+      console.log('✅ Copy Generator: Using environment variable API key');
+    }
+    
+    // Source 2: Connected AIs
+    if (!apiKey && connectedAIs && connectedAIs.length > 0) {
+      const openaiService = connectedAIs.find(ai => 
+        ai.service === 'openai' && ai.api_key && ai.api_key.startsWith('sk-')
+      );
+      if (openaiService) {
+        apiKey = openaiService.api_key;
+        console.log('✅ Copy Generator: Using connected AI API key');
+      }
+    }
+    
+    if (!apiKey || !apiKey.startsWith('sk-')) {
+      console.log('❌ Copy Generator: No valid API key found');
+      const fallbackCopy = generateFallbackCopySet(project, company);
+      return res.status(200).json({
+        success: true,
+        result: {
+          adCopy: fallbackCopy,
+          channels_processed: Object.keys(fallbackCopy),
+          total_variations: calculateTotalVariations(fallbackCopy),
+          company: company?.companyName || 'Company',
+          project: project?.name || 'Campaign'
+        },
+        metadata: {
+          generated_at: new Date().toISOString(),
+          ai_service: 'Fallback Generator'
+        }
+      });
+    }
+
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || 'demo-key'
+      apiKey: apiKey
     });
 
     const adCopy = {};
 
-    // Generate copy for each channel in the media plan
-    for (const channel of mediaPlan.channels || []) {
+    // Generate copy for project channels or fallback to generic
+    const channels = mediaPlan?.channels || project?.platforms?.map(platform => ({ name: platform })) || [{ name: 'Google Ads' }, { name: 'Facebook Ads' }];
+    
+    for (const channel of channels) {
       const copyPrompt = `
 As an expert copywriter specializing in ${channel.name} advertising, create high-converting ad copy for:
 
-Company: ${companyProfile?.companyName || 'Company'}
-Industry: ${companyProfile?.industry || 'Business'}
-Target Audience: ${companyProfile?.targetPublic || 'Professionals'}
-Unique Value: ${companyProfile?.differentials || 'Quality and expertise'}
-Average Ticket: R$ ${companyProfile?.generalAverageTicket || '500'}
+Company: ${company?.companyName || 'Company'}
+Industry: ${company?.industry || 'Business'}
+Target Audience: ${company?.targetPublic || project?.targetAudience || 'Professionals'}
+Unique Value: ${company?.differentials || 'Quality and expertise'}
+Average Ticket: R$ ${company?.generalAverageTicket || '500'}
 
-Campaign Strategy:
-- Objective: ${strategy.objective}
-- Budget: R$ ${strategy.budget}
-- Target CPA: R$ ${strategy.targetCPA}
-- Primary Message: Professional growth through quality English education
+Project Details:
+- Project: ${project?.name || 'Campaign'}
+- Description: ${project?.description || 'Marketing campaign'}
+- Objectives: ${project?.objectives || strategy?.objective || 'Generate leads'}
+- Budget: R$ ${project?.budget || '10000'}
 
 Channel: ${channel.name}
-Expected Metrics: ${channel.expectedMetrics?.cpa} CPA, ${channel.expectedMetrics?.conversions} conversions
+Expected Metrics: ${channel.expectedMetrics ? `${channel.expectedMetrics.cpa} CPA, ${channel.expectedMetrics.conversions} conversions` : 'Standard performance targets'}
 
 Create copy optimized for each funnel stage:
 
@@ -58,21 +112,21 @@ CONVERSION STAGE (Bottom of Funnel):
 FORMAT REQUIREMENTS for ${channel.name}:
 ${getChannelCopyRequirements(channel.name)}
 
-BRAND VOICE: Professional yet approachable, emphasizing 60+ years of experience and government recognition.
+BRAND VOICE: ${company?.differentials || 'Professional and trustworthy, focusing on quality and results'}
 
 KEY MESSAGING PILLARS:
-1. Official Brazil-USA Binational Center (unique credibility)
-2. 60+ years of proven results (heritage and trust)
-3. Flexible online + in-person options (convenience)
-4. Corporate focus for career advancement (professional growth)
-5. Government recognition from both countries (official status)
+1. Industry expertise and experience
+2. Quality and proven results  
+3. Flexible and convenient solutions
+4. Professional growth and advancement
+5. Unique value proposition
 
 Return structured copy that maximizes performance for ${channel.name} while maintaining brand consistency.
 `;
 
       try {
         const response = await openai.chat.completions.create({
-          model: "gpt-4",
+          model: "gpt-3.5-turbo",
           messages: [{ role: "user", content: copyPrompt }],
           max_tokens: 2000,
           temperature: 0.7
@@ -83,18 +137,22 @@ Return structured copy that maximizes performance for ${channel.name} while main
 
       } catch (aiError) {
         console.error(`AI error for ${channel.name}:`, aiError);
-        adCopy[channel.name] = generateFallbackCopy(channel.name, strategy, companyProfile);
+        adCopy[channel.name] = generateFallbackCopy(channel.name, project, company);
       }
     }
 
     res.status(200).json({
       success: true,
-      adCopy,
+      result: {
+        adCopy,
+        channels_processed: Object.keys(adCopy),
+        total_variations: calculateTotalVariations(adCopy),
+        company: company?.companyName || 'Company',
+        project: project?.name || 'Campaign'
+      },
       metadata: {
         generated_at: new Date().toISOString(),
-        ai_service: ai_service_name || 'OpenAI GPT-4',
-        channels_processed: Object.keys(adCopy),
-        total_variations: calculateTotalVariations(adCopy)
+        ai_service: 'AI Copy Generator'
       }
     });
 
@@ -103,7 +161,7 @@ Return structured copy that maximizes performance for ${channel.name} while main
     res.status(500).json({ 
       success: false,
       error: 'Copy generation failed',
-      fallback_copy: generateFallbackCopySet(mediaPlan, strategy, companyProfile)
+      result: generateFallbackCopySet(project, company)
     });
   }
 }
@@ -226,8 +284,8 @@ function extractChannelSpecificCopy(text, channelName) {
   return channelSpecific;
 }
 
-function generateFallbackCopy(channelName, strategy, companyProfile) {
-  const companyName = companyProfile?.companyName || 'Alumni English School';
+function generateFallbackCopy(channelName, project, company) {
+  const companyName = company?.companyName || 'Company';
   
   const fallbackCopy = {
     'Google Ads': {
@@ -280,11 +338,12 @@ function generateFallbackCopy(channelName, strategy, companyProfile) {
   return fallbackCopy[channelName] || fallbackCopy['Google Ads'];
 }
 
-function generateFallbackCopySet(mediaPlan, strategy, companyProfile) {
+function generateFallbackCopySet(project, company) {
   const fallbackSet = {};
+  const platforms = project?.platforms || ['Google Ads', 'Facebook Ads'];
   
-  (mediaPlan?.channels || []).forEach(channel => {
-    fallbackSet[channel.name] = generateFallbackCopy(channel.name, strategy, companyProfile);
+  platforms.forEach(platform => {
+    fallbackSet[platform] = generateFallbackCopy(platform, project, company);
   });
   
   return fallbackSet;
