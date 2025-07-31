@@ -246,11 +246,32 @@ export default async function handler(req, res) {
         });
 
       case 'list_all':
-        const allCompanies = Object.values(storedProfiles);
+        let allCompanies = Object.values(storedProfiles);
         console.log('Company Profile API: list_all called');
         console.log('Company Profile API: storedProfiles keys:', Object.keys(storedProfiles));
         console.log('Company Profile API: allCompanies length:', allCompanies.length);
         console.log('Company Profile API: allCompanies:', allCompanies);
+        
+        // If no companies found, create a fallback company for demo purposes
+        // In production, this should be removed and replaced with proper database
+        if (allCompanies.length === 0) {
+          console.log('🆘 No companies found - creating demo company');
+          const demoCompany = {
+            user_id: 'default_user',
+            companyName: 'Alumni',
+            industry: 'Education',
+            geolocation: 'São Paulo',
+            targetPublic: 'Pessoas que gostam de viajar, que ganham mínimo 7k mês, executivos de todos os níveis, empreendedores',
+            monthlyBudget: '100000',
+            marketingObjectives: 'Aumentar vendas',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          // Save it to memory storage
+          memoryStorage['default_user'] = demoCompany;
+          allCompanies = [demoCompany];
+        }
         
         return res.status(200).json({
           success: true,
