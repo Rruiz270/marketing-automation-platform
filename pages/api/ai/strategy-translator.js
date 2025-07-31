@@ -31,8 +31,8 @@ export default async function handler(req, res) {
     fullRequest: req.body
   });
 
-  // DEBUG: Log all environment variable states - UPDATED
-  console.log('🔍 Environment Variables Debug (with new env var):', {
+  // DEBUG: Log all environment variable states - FORCE REBUILD
+  console.log('🔍 Environment Variables Debug (OPENAI_API_KEY added):', {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Present (${process.env.OPENAI_API_KEY.substring(0, 7)}...)` : 'Missing',
     OPENAI_KEY: process.env.OPENAI_KEY ? `Present (${process.env.OPENAI_KEY.substring(0, 7)}...)` : 'Missing',
     NODE_ENV: process.env.NODE_ENV,
