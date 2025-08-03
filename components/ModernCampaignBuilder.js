@@ -310,21 +310,31 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       }
 
       const data = await response.json();
+      console.log('📥 API Response received:', data);
 
       if (data.success) {
+        console.log('✅ Processing successful response');
         const result = data.result;
+        console.log('📄 Result data:', result);
         setStepData(prev => ({ ...prev, [stepId]: result }));
         
         // Open enhanced content viewer
-        setContentViewerData({
-          stepId,
-          stepInfo: steps[stepId],
-          content: data,
-          result: result
-        });
-        setEditedContent(result);
-        setEditedPrompt(generationPrompts[stepId] || '');
-        setShowContentViewer(true);
+        console.log('🔍 Setting up content viewer for step:', stepId);
+        try {
+          setContentViewerData({
+            stepId,
+            stepInfo: steps[stepId],
+            content: data,
+            result: result
+          });
+          setEditedContent(result);
+          setEditedPrompt(generationPrompts[stepId] || '');
+          setShowContentViewer(true);
+          console.log('✅ Content viewer setup complete');
+        } catch (viewerError) {
+          console.error('❌ Content viewer setup failed:', viewerError);
+          alert('Error setting up content viewer: ' + viewerError.message);
+        }
       } else {
         alert(`Failed to generate ${steps[stepId].title}: ${data.error || 'Unknown error'}`);
       }
