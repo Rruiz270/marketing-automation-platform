@@ -288,6 +288,27 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         body: JSON.stringify(requestBody)
       });
 
+      if (!response.ok) {
+        console.error('API request failed:', response.status, response.statusText);
+        let errorMessage = `Failed to generate ${steps[stepId].title}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // If JSON parsing fails, try text
+          try {
+            const errorText = await response.text();
+            if (errorText) errorMessage = errorText;
+          } catch (e2) {
+            // Use default error message
+          }
+        }
+        
+        alert(`Error: ${errorMessage}`);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -304,9 +325,12 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         setEditedContent(result);
         setEditedPrompt(generationPrompts[stepId] || '');
         setShowContentViewer(true);
+      } else {
+        alert(`Failed to generate ${steps[stepId].title}: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error processing step:', error);
+      alert(`Error generating content: ${error.message || 'Please try again'}`);
     } finally {
       setLoading(false);
     }
@@ -2294,29 +2318,6 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         />
       )}
 
-      {/* Smart Context Panel */}
-      {currentStep > 0 && (
-        <div className="fixed bottom-20 right-4 bg-blue-50 rounded-lg shadow-lg p-4 max-w-xs z-30">
-          <h5 className="font-semibold text-blue-800 mb-2">💡 AI Assistant</h5>
-          <div className="text-sm text-blue-700 space-y-2">
-            {currentStep === 1 && <p>Most users spend 3 min here, you're on track</p>}
-            {currentStep === 2 && <p>Your budget allocation looks optimal for this audience</p>}
-            {currentStep === 3 && <p>Similar campaigns achieved 2.8% CTR with this copy style</p>}
-            {currentStep === 4 && <p>Visual consistency score: 95% - looking great!</p>}
-            {currentStep === 5 && <p>Campaign structure allows for 12 A/B tests</p>}
-            {currentStep === 6 && <p>All pre-flight checks passing - ready to launch</p>}
-            {currentStep === 7 && <p>Performance tracking configured for real-time insights</p>}
-          </div>
-          <div className="flex space-x-2 mt-3">
-            <button className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
-              Show me how
-            </button>
-            <button className="text-xs bg-white text-blue-600 px-2 py-1 rounded hover:bg-gray-100">
-              Learn more
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

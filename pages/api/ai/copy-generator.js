@@ -1,5 +1,4 @@
 // AI Copy Generator - Create high-converting copy for all channels and funnel stages
-import OpenAI from 'openai';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -61,6 +60,8 @@ export default async function handler(req, res) {
       });
     }
 
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: apiKey
     });
