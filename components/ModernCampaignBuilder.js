@@ -282,6 +282,13 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         requestBody.customPrompt = generationPrompts[stepId];
       }
 
+      console.log(`🚀 API Request for Step ${stepId} (${steps[stepId].title}):`, {
+        endpoint: endpoints[stepId],
+        requestBody: requestBody,
+        company: selectedCompany?.companyName,
+        project: selectedProject?.name
+      });
+
       const response = await fetch(endpoints[stepId], {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2255,8 +2262,8 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
             <div className="flex items-center justify-between">
               {/* Previous Button */}
               <button
-                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-                disabled={currentStep <= 1}
+                onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                disabled={currentStep <= 0}
                 className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 <span className="mr-2">←</span>
@@ -2299,12 +2306,31 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
             {/* Additional Actions */}
             <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentStep(0)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm"
-              >
-                ← Back to Project Selection
-              </button>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setCurrentStep(0)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm"
+                >
+                  ← Back to Project Selection
+                </button>
+                
+                <button
+                  onClick={() => {
+                    const dataToInspect = {
+                      selectedCompany,
+                      selectedProject,
+                      stepData,
+                      connectedAIs,
+                      generationPrompts
+                    };
+                    console.log('🔍 CAMPAIGN BUILDER DATA INSPECTION:', dataToInspect);
+                    alert(`Data Inspection Complete!\n\nCompany: ${selectedCompany?.companyName || 'None'}\nProject: ${selectedProject?.name || 'None'}\nCompleted Steps: ${Object.keys(stepData).length}\nConnected AIs: ${connectedAIs?.length || 0}\n\nFull data logged to browser console (F12 → Console)`);
+                  }}
+                  className="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm rounded-lg"
+                >
+                  🔍 Inspect Data
+                </button>
+              </div>
               
               <div className="text-sm text-gray-500">
                 Step {currentStep} of {steps.length - 1} • {selectedProject?.name}
