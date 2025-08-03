@@ -2211,19 +2211,71 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
             </p>
           </div>
 
-          {/* Campaign Steps */}
-          <div className="space-y-6">
-            {steps.slice(1).map((step) => renderStepContent(step))}
+          {/* Current Step */}
+          <div className="mb-6">
+            {renderStepContent(steps.find(s => s.id === currentStep))}
           </div>
 
-          {/* Back to Project Selection */}
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => setCurrentStep(0)}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-            >
-              ← Back to Project Selection
-            </button>
+          {/* Step Navigation Footer */}
+          <div className="bg-white rounded-lg shadow-lg border p-6">
+            <div className="flex items-center justify-between">
+              {/* Previous Button */}
+              <button
+                onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                disabled={currentStep <= 1}
+                className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                <span className="mr-2">←</span>
+                Previous
+              </button>
+
+              {/* Step Progress Indicator */}
+              <div className="flex items-center space-x-2">
+                {steps.slice(1).map((step) => (
+                  <button
+                    key={step.id}
+                    onClick={() => setCurrentStep(step.id)}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                      step.id === currentStep
+                        ? 'bg-blue-500 text-white'
+                        : stepData[step.id]
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    {stepData[step.id] ? '✓' : step.id}
+                  </button>
+                ))}
+              </div>
+
+              {/* Next Button */}
+              <button
+                onClick={() => {
+                  if (currentStep < steps.length - 1) {
+                    setCurrentStep(currentStep + 1);
+                  }
+                }}
+                disabled={currentStep >= steps.length - 1}
+                className="flex items-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Next
+                <span className="ml-2">→</span>
+              </button>
+            </div>
+
+            {/* Additional Actions */}
+            <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+              <button
+                onClick={() => setCurrentStep(0)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm"
+              >
+                ← Back to Project Selection
+              </button>
+              
+              <div className="text-sm text-gray-500">
+                Step {currentStep} of {steps.length - 1} • {selectedProject?.name}
+              </div>
+            </div>
           </div>
         </>
       )}
