@@ -252,12 +252,15 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
   };
 
   const processStep = async (stepId) => {
+    console.log('🚀 ProcessStep called for step:', stepId);
     setLoading(true);
+    
     try {
+      console.log('📍 Inside processStep try block');
       const endpoints = {
         1: '/api/ai/strategy-translator',
         2: '/api/ai/media-planner', 
-        3: '/api/ai/copy-generator',
+        3: '/api/test-copy', // TEMPORARY: Using test endpoint to isolate issue
         4: '/api/ai/creative-generator',
         5: '/api/ai/campaign-structurer',
         6: '/api/ai/campaign-publisher',
@@ -353,8 +356,31 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
         alert(`Failed to generate ${steps[stepId].title}: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error processing step:', error);
-      alert(`Error generating content: ${error.message || 'Please try again'}`);
+      console.error('❌ CRITICAL ERROR in processStep:', {
+        stepId,
+        errorMessage: error.message,
+        errorStack: error.stack,
+        errorName: error.name,
+        selectedCompany: selectedCompany?.companyName,
+        selectedProject: selectedProject?.name
+      });
+      
+      // Show detailed error to user
+      alert(`DEBUGGING ERROR - Step ${stepId}:\n\nError Type: ${error.name}\nMessage: ${error.message}\n\nCheck browser console for full details.`);
+      
+      // Try to set fallback data so UI doesn't break
+      try {
+        setStepData(prev => ({ 
+          ...prev, 
+          [stepId]: { 
+            error: true, 
+            errorMessage: error.message,
+            fallback: 'Error occurred during processing'
+          } 
+        }));
+      } catch (fallbackError) {
+        console.error('❌ Even fallback failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
