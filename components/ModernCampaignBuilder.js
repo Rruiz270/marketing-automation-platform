@@ -319,11 +319,18 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
       const data = await response.json();
       console.log('📥 API Response received:', data);
 
-      if (data.success) {
-        console.log('✅ Processing successful response');
+      // Always process result, even if success is false (fallback handling)
+      if (data.success || data.result) {
+        console.log('✅ Processing response (success:', data.success, ')');
         const result = data.result;
         console.log('📄 Result data:', result);
-        setStepData(prev => ({ ...prev, [stepId]: result }));
+        
+        if (result) {
+          setStepData(prev => ({ ...prev, [stepId]: result }));
+        } else {
+          console.warn('⚠️ No result data in response, using fallback');
+          setStepData(prev => ({ ...prev, [stepId]: { error: 'No data returned' } }));
+        }
         
         // Open enhanced content viewer
         console.log('🔍 Setting up content viewer for step:', stepId);
