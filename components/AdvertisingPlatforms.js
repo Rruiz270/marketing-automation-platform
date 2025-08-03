@@ -9,6 +9,7 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
   const [testingPlatform, setTestingPlatform] = useState(null);
   const [oauthPopupOpen, setOauthPopupOpen] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState(null);
+  const [showMetaManager, setShowMetaManager] = useState(false);
 
   const platforms = [
     {
@@ -120,8 +121,51 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
   };
 
   const handleConnectClick = (platformId) => {
+    // Handle Meta Business connection directly
+    if (platformId === 'meta-business') {
+      handleMetaConnect();
+      return;
+    }
+    
     setSelectedPlatform(platformId);
     setOauthPopupOpen(true);
+  };
+
+  const handleMetaConnect = async () => {
+    setLoading(true);
+    setTestingPlatform('meta-business');
+    
+    try {
+      // Get OAuth URL from Meta auth API
+      const response = await fetch('/api/platforms/meta-auth?userId=default_user');
+      const data = await response.json();
+      
+      if (data.authUrl) {
+        // In production, redirect to authUrl
+        // For now, show setup instructions
+        alert(`Meta Business Setup Required:\n\n1. Create a Meta App at developers.facebook.com\n2. Add these environment variables in Vercel:\n   META_APP_ID=your_app_id\n   META_APP_SECRET=your_app_secret\n3. Then redirect to: ${data.authUrl}\n\nFor now, I'll simulate a connection for demo purposes...`);
+        
+        // Simulate successful connection for demo
+        const newConnection = {
+          platform: 'meta-business',
+          status: 'connected',
+          connected_at: new Date().toISOString(),
+          account_name: 'Alumni Meta Business Account',
+          ad_accounts: 1,
+          permissions: ['ads_management', 'ads_read', 'pages_manage_ads']
+        };
+        
+        setConnections(prev => [...prev.filter(c => c.platform !== 'meta-business'), newConnection]);
+        onUpdate && onUpdate();
+        alert('Meta Business connected successfully! (Demo mode)');
+      }
+    } catch (error) {
+      console.error('Meta connection error:', error);
+      alert('Failed to initiate Meta connection. Check console for details.');
+    } finally {
+      setLoading(false);
+      setTestingPlatform(null);
+    }
   };
 
   const handleConnect = async (platformId, credentials) => {
@@ -240,8 +284,8 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
           const connected = isConnected(platform.id);
           const testing = isTesting(platform.id);
           
-          // Use custom MetaConnector for Meta Business platform
-          if (platform.id === 'meta-business' && platform.useCustomComponent) {
+          // Use custom MetaConnector for Meta Business platform when connected
+          if (platform.id === 'meta-business' && platform.useCustomComponent && connected) {
             return (
               <motion.div
                 key={platform.id}
@@ -342,7 +386,14 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
                     
                     <div className="flex space-x-3">
                       <button
-                        onClick={() => alert('Campaign management coming soon!')}
+                        onClick={() => {
+                          if (platform.id === 'meta-business') {
+                            // Toggle to show MetaConnector interface
+                            setShowMetaManager(true);
+                          } else {
+                            alert('Campaign management coming soon!');
+                          }
+                        }}
                         className="flex-1 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium"
                       >
                         Manage Campaigns
@@ -404,6 +455,28 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
         }}
         onConnect={handleConnect}
       />
+
+      {/* Meta Management Modal */}
+      {showMetaManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">Meta Business Campaign Manager</h2>
+              <button 
+                onClick={() => setShowMetaManager(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <MetaConnector onConnectionChange={(isConnected) => {
+                if (onUpdate) onUpdate();
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
