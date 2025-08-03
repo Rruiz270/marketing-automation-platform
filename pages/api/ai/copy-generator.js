@@ -13,6 +13,23 @@ export default async function handler(req, res) {
     connectedAIsCount: connectedAIs?.length || 0,
     hasPreviousSteps: !!previousSteps
   });
+  
+  // Log actual project data being used
+  console.log('📊 Project Data:', {
+    name: projectData?.name,
+    description: projectData?.description,
+    objectives: projectData?.objectives,
+    budget: projectData?.budget,
+    platforms: projectData?.platforms,
+    targetAudience: projectData?.targetAudience
+  });
+  
+  console.log('🏢 Company Data:', {
+    name: companyData?.companyName,
+    industry: companyData?.industry,
+    targetPublic: companyData?.targetPublic,
+    differentials: companyData?.differentials
+  });
 
   // Use company and project data directly (like other APIs)
   const company = companyData;

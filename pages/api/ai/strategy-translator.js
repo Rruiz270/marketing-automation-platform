@@ -1,6 +1,4 @@
 // AI Strategy Translator - Transform business objectives into paid media strategy
-import OpenAI from 'openai';
-import { apiKeyManager } from '../../../lib/api-key-manager.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -132,6 +130,8 @@ export default async function handler(req, res) {
     
     console.log('Initializing OpenAI with key starting with:', apiKey.substring(0, 7) + '...');
     
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: apiKey
     });
