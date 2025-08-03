@@ -286,185 +286,169 @@ function extractChannelSpecificCopy(text, channelName) {
 
 function generateFallbackCopy(channelName, project, company) {
   const companyName = company?.companyName || 'Company';
+  const industry = company?.industry || 'Business';
+  const projectName = project?.name || 'Campaign';
+  const objectives = project?.objectives || 'Generate leads and increase sales';
   
   const fallbackCopy = {
     'Google Ads': {
-      headlines: [
-        `${companyName} - Quality English`,
-        `Learn English Online`,
-        `Professional English Course`,
-        `English for Executives`,
-        `Career English Training`
-      ],
-      descriptions: [
-        `Transform your career with professional English courses from ${companyName}`,
-        `Learn English online with flexible schedules and proven results`,
-        `Join thousands of professionals improving their English skills`
-      ],
-      ctas: [
-        'Learn More',
-        'Start Today',
-        'Get Free Trial',
-        'Book Consultation',
-        'Join Now'
-      ],
-      funnel_stages: {
-        awareness: {
-          headlines: [
-            'English for Professionals',
-            'Career Growth English',
-            'Business English Course'
-          ],
-          descriptions: [
-            'Discover how English can boost your career',
-            'Professional English training for executives'
-          ],
-          ctas: ['Learn More', 'Discover How', 'Find Out More']
-        },
-        consideration: {
-          headlines: [
-            `Why Choose ${companyName}`,
-            'Proven English Results',
-            'Flexible Online Learning'
-          ],
-          descriptions: [
-            'Join thousands of successful professionals',
-            'Flexible schedule, proven methodology'
-          ],
-          ctas: ['Start Free Trial', 'See Results', 'Book Demo']
-        },
-        conversion: {
-          headlines: [
-            'Start Learning Today',
-            'Limited Time Offer',
-            'Join Now - Special Price'
-          ],
-          descriptions: [
-            'Begin your English transformation today',
-            'Special enrollment period - act now'
-          ],
-          ctas: ['Enroll Now', 'Get Started', 'Join Today']
-        }
+      // TOP OF FUNNEL - AWARENESS
+      awareness: {
+        headlines: [
+          `${companyName} - Quality English Courses`,
+          `Professional English Training`,
+          `Learn Business English Online`,
+          `English for Career Growth`,
+          `Advanced English Classes`
+        ],
+        descriptions: [
+          `Discover professional English courses designed for ${industry} professionals. Flexible schedules, proven results.`,
+          `Transform your career with expert English training. Join thousands of successful professionals.`,
+          `Premium English education with 60+ years of experience. Online and in-person classes available.`
+        ],
+        ctas: ['Learn More', 'Discover Courses', 'Get Info', 'View Programs', 'Find Out More']
       },
-      channel_specific: {
-        extensions: {
-          sitelinks: [
-            'Course Info',
-            'Free Assessment', 
-            'Student Success',
-            'Contact Us'
-          ],
-          callouts: [
-            'Proven Results',
-            'Flexible Schedule',
-            'Professional Focus',
-            'Expert Teachers'
-          ]
-        }
+      
+      // MIDDLE OF FUNNEL - CONSIDERATION  
+      consideration: {
+        headlines: [
+          `${companyName} English - Proven Results`,
+          `Professional English Course`,
+          `Business English Training`,
+          `Career-Focused English`,
+          `Executive English Program`
+        ],
+        descriptions: [
+          `Compare our professional English programs. See why 95% of students achieve fluency within 12 months.`,
+          `Get a free consultation and course recommendation tailored to your career goals and schedule.`,
+          `Download our success stories and see how professionals like you advanced their careers with our courses.`
+        ],
+        ctas: ['Compare Courses', 'Get Consultation', 'Download Guide', 'See Results', 'Book Demo']
+      },
+      
+      // BOTTOM OF FUNNEL - CONVERSION
+      conversion: {
+        headlines: [
+          `${companyName} - Start Today`,
+          `Free English Assessment`,
+          `Book Your Trial Class`,
+          `Professional English Course`,
+          `Limited Time Offer`
+        ],
+        descriptions: [
+          `Start your professional English journey today. Free assessment and trial class available this week.`,
+          `Limited enrollment for our executive English program. Secure your spot with our early bird discount.`,
+          `Join our next cohort starting this month. Financing options available for working professionals.`
+        ],
+        ctas: ['Start Free Trial', 'Book Assessment', 'Enroll Now', 'Get Started', 'Claim Discount']
       }
     },
-    'Facebook Ads': {
-      headlines: [
-        'Professional English Course',
-        'Business English Training', 
-        'Corporate English Classes',
-        'Learn English Online',
-        'English for Career Growth'
-      ],
-      descriptions: [
-        `${companyName} - Transform your career with professional English`,
-        'Flexible online classes that fit your schedule',
-        'Join thousands of professionals improving their English'
-      ],
-      ctas: ['Learn More', 'Get Started', 'Free Assessment'],
-      funnel_stages: {
-        awareness: {
-          headlines: [
-            'Want Better Career Opportunities?',
-            'English Opens Doors 🚪',
-            'Professional Growth Awaits'
-          ],
-          descriptions: [
-            'Discover how English can transform your career',
-            'See why professionals choose our English courses'
-          ],
-          ctas: ['Learn More', 'Discover How', 'See Results']
-        },
-        consideration: {
-          headlines: [
-            `Why Choose ${companyName}? 🤔`,
-            'Proven Results & Flexibility',
-            'Professional English Experts'
-          ],
-          descriptions: [
-            'Flexible schedule + proven methodology = success',
-            'Join thousands who advanced their careers with us'
-          ],
-          ctas: ['Start Free Trial', 'Book Demo', 'See Proof']
-        },
-        conversion: {
-          headlines: [
-            'Ready to Transform Your Career? 🚀',
-            'Limited Spots Available',
-            'Start Your Journey Today'
-          ],
-          descriptions: [
-            'Begin your English transformation now',
-            'Special enrollment - limited time offer'
-          ],
-          ctas: ['Enroll Now', 'Get Started', 'Claim Spot']
-        }
+    
+    'Meta Business': {
+      // AWARENESS STAGE
+      awareness: {
+        headlines: [
+          `🚀 ${companyName} English`,
+          `📚 Professional English`,
+          `🎯 Business English Course`,
+          `💼 Executive English Training`,
+          `🌟 Career English Classes`
+        ],
+        descriptions: [
+          `Ready to advance your career? 🚀 Discover professional English courses that fit your busy schedule. Perfect for ambitious professionals! 📈`,
+          `Transform your communication skills with ${companyName}'s proven English programs. 60+ years of excellence in professional education! ⭐`,
+          `Join thousands of professionals who boosted their careers with our flexible English training. Online & in-person options! 💻🏢`
+        ],
+        ctas: ['Learn More', 'Discover More', 'See Courses', 'Get Info', 'Find Out']
       },
-      channel_specific: {
-        formats: {
-          stories: [
-            'Quick English Tips 💡',
-            'Success Stories 🌟',
-            'Behind the Scenes 📚'
-          ],
-          reels: [
-            'Pronunciation Tips 🗣️',
-            'Grammar Hacks ✍️',
-            'Student Success 🎉'
-          ]
-        }
+      
+      // CONSIDERATION STAGE
+      consideration: {
+        headlines: [
+          `✅ ${companyName} Success Stories`,
+          `📊 95% Student Success Rate`,
+          `🏆 Proven English Method`,
+          `💡 Free English Assessment`,
+          `🎓 Professional Certification`
+        ],
+        descriptions: [
+          `See how professionals like you achieved fluency in 12 months! 📈 Read success stories and testimonials from our alumni network. 🌟`,
+          `Get your free English level assessment and personalized course recommendation. See exactly which program fits your goals! 🎯`,
+          `Compare our professional English programs. See curriculum, schedules, and pricing. Free consultation available! 💬`
+        ],
+        ctas: ['Read Stories', 'Get Assessment', 'Compare Plans', 'Book Consultation', 'See Results']
+      },
+      
+      // CONVERSION STAGE
+      conversion: {
+        headlines: [
+          `🔥 Limited Enrollment Open`,
+          `🎁 Free Trial Class`,
+          `⏰ Start This Month`,
+          `💰 Early Bird Discount`,
+          `🚀 Begin Your Journey`
+        ],
+        descriptions: [
+          `Limited spots available for our executive English program! 🔥 Book your free trial class and assessment this week. Don't miss out! ⏰`,
+          `Ready to start? 🚀 Get 20% off when you enroll this month. Free trial class, flexible payment plans, and career support included! 💪`,
+          `Your English breakthrough starts here! 🌟 Book your free assessment, try a class, and see why 95% of our students succeed! 📈`
+        ],
+        ctas: ['Book Free Trial', 'Get Discount', 'Start Now', 'Claim Spot', 'Begin Today']
       }
     },
-    'Facebook/Instagram': {
-      headlines: [
-        'Advance Your Career 🚀',
-        'English That Opens Doors',
-        'Professional English Course',
-        'Learn Business English',
-        'Career Growth Starts Here'
-      ],
-      descriptions: [
-        'Join thousands who advanced their careers with our English courses.',
-        '60+ years of proven results. Flexible schedule that fits your life.',
-        'Official Brazil-USA center. Government recognized quality.'
-      ],
-      ctas: ['Start Learning', 'Book Free Class', 'See Courses']
-    },
-    'LinkedIn': {
-      headlines: [
-        'Executive English Training',
-        'Professional Development',
-        'Business English Mastery',
-        'Corporate Language Training',
-        'Career Advancement English'
-      ],
-      descriptions: [
-        'Strategic English training for business professionals and executives.',
-        'Custom corporate programs. Government recognized certification.',
-        '60+ years serving Brazil\'s top companies and professionals.'
-      ],
-      ctas: ['Schedule Consultation', 'View Programs', 'Contact Us']
+    
+    'LinkedIn Ads': {
+      awareness: {
+        headlines: [
+          `${companyName} Professional English`,
+          `Executive English Training`,
+          `Business Communication Skills`,
+          `Corporate English Program`,
+          `Leadership English Course`
+        ],
+        descriptions: [
+          `Advance your career with professional English training designed for executives and business leaders.`,
+          `Join C-level executives who enhanced their global communication with our proven English programs.`,
+          `Professional English courses for ambitious leaders. Flexible schedules for busy professionals.`
+        ],
+        ctas: ['Learn More', 'View Program', 'Get Details', 'Explore Courses', 'Find Out More']
+      },
+      consideration: {
+        headlines: [
+          `Executive English Success`,
+          `${companyName} Leadership Program`,
+          `C-Suite English Training`,
+          `Global Communication Skills`,
+          `Professional Development`
+        ],
+        descriptions: [
+          `See how executives like you gained confidence in global meetings and presentations.`,
+          `Premium English training for senior professionals. Personalized coaching and flexible scheduling.`,
+          `Invest in your leadership communication. Join our exclusive executive English program.`
+        ],
+        ctas: ['Read Success Stories', 'Book Consultation', 'Get Brochure', 'Schedule Call', 'Learn More']
+      },
+      conversion: {
+        headlines: [
+          `Executive Enrollment Open`,
+          `Limited Cohort Starting`,
+          `Premium English Program`,
+          `Leadership English Training`,
+          `Start Your Transformation`
+        ],
+        descriptions: [
+          `Exclusive enrollment for our executive English program. Limited seats for senior professionals.`,
+          `Transform your global communication in 6 months. Premium coaching and personalized curriculum.`,
+          `Join our next executive cohort. Corporate rates and flexible payment options available.`
+        ],
+        ctas: ['Apply Now', 'Reserve Spot', 'Get Started', 'Join Cohort', 'Enroll Today']
+      }
     }
   };
-
+  
+  // Return the copy for the requested channel or default to Google Ads
   return fallbackCopy[channelName] || fallbackCopy['Google Ads'];
 }
-
 function generateFallbackCopySet(project, company) {
   const fallbackSet = {};
   const platforms = project?.platforms || ['Google Ads', 'Facebook Ads'];

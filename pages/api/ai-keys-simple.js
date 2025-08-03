@@ -217,7 +217,8 @@ export default async function handler(req, res) {
           service,
           service_name: AI_SERVICES[service].name,
           category: AI_SERVICES[service].category,
-          api_key_preview: api_key.substring(0, 12) + '...' + api_key.substring(api_key.length - 4), // Store preview only
+          api_key: api_key, // Store the full API key for actual usage
+          api_key_preview: api_key.substring(0, 12) + '...' + api_key.substring(api_key.length - 4), // Store preview for display
           status: 'active',
           enabled: true,
           is_default: false, // New field for default service
@@ -239,9 +240,17 @@ export default async function handler(req, res) {
         const userKeys = Object.values(storedKeys).filter(key => key.user_id === user_id);
         console.log('Returning user keys for', user_id, ':', userKeys.length, 'keys found');
         console.log('User keys:', userKeys.map(k => ({ service: k.service, status: k.status, enabled: k.enabled })));
+        
+        // For security, only return preview for display purposes, but include full key for API usage
+        const keysForDisplay = userKeys.map(key => ({
+          ...key,
+          // Keep both api_key (for actual usage) and api_key_preview (for display)
+          // The consuming components should use api_key for API calls and api_key_preview for UI
+        }));
+        
         return res.status(200).json({
           success: true,
-          data: userKeys
+          data: keysForDisplay
         });
 
       case 'toggle_api_key':
@@ -395,8 +404,6 @@ export default async function handler(req, res) {
 
 // Test API key validity
 async function testApiKey(service, apiKey) {
-  // For production, you would test the actual API key here
-  // For now, we'll do basic validation
   try {
     switch (service) {
       case 'openai':
@@ -405,10 +412,38 @@ async function testApiKey(service, apiKey) {
         if ((!apiKey.startsWith('sk-') && !apiKey.startsWith('sk-proj-')) || apiKey.length < 20) {
           return { valid: false, error: 'Invalid OpenAI API key format. Should start with sk- or sk-proj-' };
         }
+        
+        // Optional: Test actual API connection (commented out for demo)
+        /*
+        try {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!response.ok) {
+            return { valid: false, error: 'Invalid OpenAI API key - authentication failed' };
+          }
+          
+          const data = await response.json();
+          return {
+            valid: true,
+            status: 'active',
+            quota_remaining: 'Available',
+            models_available: data.data?.length || 0,
+            tested_at: new Date().toISOString()
+          };
+        } catch (apiError) {
+          return { valid: false, error: 'Failed to validate OpenAI API key: ' + apiError.message };
+        }
+        */
+        
         break;
       case 'claude':
         if (!apiKey.startsWith('sk-ant-') || apiKey.length < 20) {
-          return { valid: false, error: 'Invalid Claude API key format' };
+          return { valid: false, error: 'Invalid Claude API key format. Should start with sk-ant-' };
         }
         break;
       default:

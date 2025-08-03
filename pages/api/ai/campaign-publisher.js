@@ -9,23 +9,51 @@ export default async function handler(req, res) {
     
     console.log('🚀 Simple Campaign Publisher called');
 
-    // Always return platform setup data
+    // Get selected platforms from project data
+    const selectedPlatforms = projectData?.platforms || ['Meta Business']; // Default to Meta Business if no selection
+    console.log('🎯 Campaign Publisher: Selected platforms:', selectedPlatforms);
+    
+    // Platform configurations
+    const availablePlatforms = {
+      'Google Ads': {
+        name: 'Google Ads',
+        status: 'ready_to_connect',
+        connection_url: 'https://ads.google.com',
+        requirements: ['Google Ads account', 'Billing setup', 'Campaign approval']
+      },
+      'Meta Business': {
+        name: 'Meta Business',
+        status: 'ready_to_connect', 
+        connection_url: '/advertising-platforms',
+        requirements: ['Meta Business account', 'Ad account access', 'Page admin rights'],
+        integration: 'native'
+      },
+      'LinkedIn Ads': {
+        name: 'LinkedIn Ads',
+        status: 'ready_to_connect',
+        connection_url: '/advertising-platforms',
+        requirements: ['LinkedIn Campaign Manager', 'Business account', 'Billing setup']
+      },
+      'Twitter Ads': {
+        name: 'Twitter Ads',
+        status: 'ready_to_connect',
+        connection_url: '/advertising-platforms',
+        requirements: ['Twitter Ads account', 'API access', 'Billing setup']
+      }
+    };
+    
+    // Only include platforms that were selected in the project
+    const platforms = selectedPlatforms.map(platformName => {
+      return availablePlatforms[platformName] || {
+        name: platformName,
+        status: 'ready_to_connect',
+        connection_url: '/advertising-platforms',
+        requirements: ['Platform account', 'API access', 'Billing setup']
+      };
+    });
+    
     const platformSetup = {
-      platforms: [
-        {
-          name: 'Google Ads',
-          status: 'ready_to_connect',
-          connection_url: 'https://ads.google.com',
-          requirements: ['Google Ads account', 'Billing setup', 'Campaign approval']
-        },
-        {
-          name: 'Meta Business',
-          status: 'ready_to_connect', 
-          connection_url: '/advertising-platforms',
-          requirements: ['Meta Business account', 'Ad account access', 'Page admin rights'],
-          integration: 'native'
-        }
-      ],
+      platforms: platforms,
       checklist: [
         'Campaign budgets configured',
         'Conversion tracking ready',
