@@ -191,18 +191,26 @@ export default async function handler(req, res) {
         });
 
       case 'save_api_key':
-        console.log('Saving API key for service:', service);
+        console.log('📝 Saving API key for service:', service, 'User:', user_id);
+        console.log('🔑 API key provided:', api_key ? `${api_key.substring(0, 10)}...` : 'null');
+        
         if (!service || !api_key) {
+          console.log('❌ Missing required fields - service:', !!service, 'api_key:', !!api_key);
           return res.status(400).json({ error: 'Service and API key are required' });
         }
 
         if (!AI_SERVICES[service]) {
+          console.log('❌ Invalid service:', service, 'Available:', Object.keys(AI_SERVICES));
           return res.status(400).json({ error: 'Invalid service' });
         }
 
         // Test the API key
+        console.log('🧪 Testing API key for service:', service);
         const testResult = await testApiKey(service, api_key);
+        console.log('🧪 Test result:', testResult);
+        
         if (!testResult.valid) {
+          console.log('❌ API key validation failed:', testResult.error);
           return res.status(400).json({ 
             success: false,
             error: 'Invalid API key',
@@ -408,9 +416,9 @@ async function testApiKey(service, apiKey) {
     switch (service) {
       case 'openai':
       case 'dalle':
-        // OpenAI keys can start with sk-proj- or just sk-
-        if ((!apiKey.startsWith('sk-') && !apiKey.startsWith('sk-proj-')) || apiKey.length < 20) {
-          return { valid: false, error: 'Invalid OpenAI API key format. Should start with sk- or sk-proj-' };
+        // OpenAI keys can start with sk-proj- or just sk- (be more flexible)
+        if (!apiKey.startsWith('sk-') || apiKey.length < 15) {
+          return { valid: false, error: 'Invalid OpenAI API key format. Should start with sk- and be at least 15 characters long' };
         }
         
         // Optional: Test actual API connection (commented out for demo)
@@ -442,13 +450,13 @@ async function testApiKey(service, apiKey) {
         
         break;
       case 'claude':
-        if (!apiKey.startsWith('sk-ant-') || apiKey.length < 20) {
-          return { valid: false, error: 'Invalid Claude API key format. Should start with sk-ant-' };
+        if (!apiKey.startsWith('sk-ant-') || apiKey.length < 15) {
+          return { valid: false, error: 'Invalid Claude API key format. Should start with sk-ant- and be at least 15 characters long' };
         }
         break;
       default:
-        if (!apiKey || apiKey.length < 10) {
-          return { valid: false, error: 'API key too short' };
+        if (!apiKey || apiKey.length < 5) {
+          return { valid: false, error: 'API key is required and must be at least 5 characters long' };
         }
     }
 
