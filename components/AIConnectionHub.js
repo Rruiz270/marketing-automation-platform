@@ -202,9 +202,21 @@ const AIConnectionHub = ({ onUpdate }) => {
       
       if (!response.ok) {
         console.error('Response not OK:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response body:', errorText);
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        let errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+        
+        try {
+          // Try to parse JSON error response
+          const errorData = await response.json();
+          console.error('Error response data:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // If not JSON, try text
+          const errorText = await response.text();
+          console.error('Error response text:', errorText);
+          if (errorText) errorMessage = errorText;
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
