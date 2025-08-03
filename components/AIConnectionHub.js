@@ -148,6 +148,7 @@ const AIConnectionHub = ({ onUpdate }) => {
 
   const loadConnections = async () => {
     try {
+      console.log('Loading AI connections...');
       const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,6 +157,12 @@ const AIConnectionHub = ({ onUpdate }) => {
           user_id: 'default_user'
         })
       });
+      
+      if (!response.ok) {
+        console.error('Failed to load connections:', response.status, response.statusText);
+        return;
+      }
+      
       const data = await response.json();
       console.log('AI Keys loaded:', data);
       if (data.success) {
@@ -173,6 +180,12 @@ const AIConnectionHub = ({ onUpdate }) => {
     setTestingService(serviceId);
     
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      console.log(`Attempting to connect ${serviceId} with API key starting with: ${apiKey.substring(0, 10)}...`);
+      
       const response = await fetch('/api/ai-keys-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,8 +194,18 @@ const AIConnectionHub = ({ onUpdate }) => {
           service: serviceId,
           api_key: apiKey,
           user_id: 'default_user'
-        })
+        }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
       
       const data = await response.json();
       console.log('Connect response:', data);
@@ -199,6 +222,11 @@ const AIConnectionHub = ({ onUpdate }) => {
       }
     } catch (error) {
       console.error('Error connecting service:', error);
+      if (error.name === 'AbortError') {
+        alert('Connection timeout: The server took too long to respond. Please check your internet connection and try again.');
+      } else {
+        alert(`Connection failed: ${error.message || 'Unknown error occurred'}`);
+      }
     } finally {
       setLoading(false);
       setTestingService(null);

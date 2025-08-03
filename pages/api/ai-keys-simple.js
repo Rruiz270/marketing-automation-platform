@@ -1,5 +1,4 @@
 // Persistent AI Keys API with MongoDB storage
-import { connectToDatabase } from '../../lib/mongodb';
 
 const AI_SERVICES = {
   // TEXT/COPY AI SERVICES
@@ -105,7 +104,8 @@ let memoryStorage = {};
 // Load stored keys from MongoDB with fallback
 async function loadStoredKeys() {
   try {
-    // Try MongoDB first
+    // Try MongoDB first - dynamic import to avoid import errors
+    const { connectToDatabase } = await import('../../lib/mongodb');
     const { db } = await connectToDatabase();
     const keys = await db.collection('ai_keys').find({}).toArray();
     
@@ -133,7 +133,8 @@ async function saveStoredKeys(keys) {
   memoryStorage = keys;
   
   try {
-    // Try to save to MongoDB
+    // Try to save to MongoDB - dynamic import to avoid import errors
+    const { connectToDatabase } = await import('../../lib/mongodb');
     const { db } = await connectToDatabase();
     
     // Update each key in MongoDB
@@ -152,6 +153,16 @@ async function saveStoredKeys(keys) {
 }
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
