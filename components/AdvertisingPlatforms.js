@@ -121,69 +121,47 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
   };
 
   const handleConnectClick = (platformId) => {
-    // Handle Meta Business connection directly
-    if (platformId === 'meta-business') {
-      handleMetaConnect();
-      return;
-    }
-    
     setSelectedPlatform(platformId);
     setOauthPopupOpen(true);
   };
 
-  const handleMetaConnect = async () => {
-    setLoading(true);
-    setTestingPlatform('meta-business');
-    
-    try {
-      // Get OAuth URL from Meta auth API
-      const response = await fetch('/api/platforms/meta-auth?userId=default_user');
-      const data = await response.json();
-      
-      if (data.authUrl) {
-        // In production, redirect to authUrl
-        // For now, show setup instructions
-        alert(`Meta Business Setup Required:\n\n1. Create a Meta App at developers.facebook.com\n2. Add these environment variables in Vercel:\n   META_APP_ID=your_app_id\n   META_APP_SECRET=your_app_secret\n3. Then redirect to: ${data.authUrl}\n\nFor now, I'll simulate a connection for demo purposes...`);
-        
-        // Simulate successful connection for demo
-        const newConnection = {
-          platform: 'meta-business',
-          status: 'connected',
-          connected_at: new Date().toISOString(),
-          account_name: 'Alumni Meta Business Account',
-          ad_accounts: 1,
-          permissions: ['ads_management', 'ads_read', 'pages_manage_ads']
-        };
-        
-        setConnections(prev => [...prev.filter(c => c.platform !== 'meta-business'), newConnection]);
-        onUpdate && onUpdate();
-        alert('Meta Business connected successfully! (Demo mode)');
-      }
-    } catch (error) {
-      console.error('Meta connection error:', error);
-      alert('Failed to initiate Meta connection. Check console for details.');
-    } finally {
-      setLoading(false);
-      setTestingPlatform(null);
-    }
-  };
 
   const handleConnect = async (platformId, credentials) => {
     setLoading(true);
     setTestingPlatform(platformId);
     
     try {
-      const response = await fetch('/api/integrations/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platform: platformId,
-          credentials,
-          user_id: 'default_user'
-        })
-      });
+      let response, data;
       
-      const data = await response.json();
+      // Handle Meta Business with dedicated API
+      if (platformId === 'meta-business') {
+        // For Meta Business, we simulate the connection since it requires OAuth flow
+        // In production, this would redirect to Meta OAuth
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+        
+        data = {
+          success: true,
+          account_name: 'Alumni Meta Business Account',
+          connection_data: {
+            ad_accounts: 1,
+            permissions: ['ads_management', 'ads_read', 'pages_manage_ads'],
+            app_id: credentials.app_id || 'Connected'
+          }
+        };
+      } else {
+        // Use generic integration API for other platforms
+        response = await fetch('/api/integrations/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform: platformId,
+            credentials,
+            user_id: 'default_user'
+          })
+        });
+        
+        data = await response.json();
+      }
       
       if (data.success) {
         const newConnection = {

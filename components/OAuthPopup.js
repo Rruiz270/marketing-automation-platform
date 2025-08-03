@@ -52,6 +52,26 @@ const OAuthPopup = ({ platform, isOpen, onClose, onConnect }) => {
       ],
       docsUrl: 'https://developers.facebook.com/docs/marketing-apis/get-started'
     },
+    'meta-business': {
+      name: 'Meta Business',
+      icon: '📘',
+      color: 'from-blue-600 to-indigo-700',
+      fields: [
+        { key: 'app_id', label: 'Meta App ID', placeholder: '1234567890123456', required: true },
+        { key: 'app_secret', label: 'Meta App Secret', placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', required: true },
+        { key: 'access_token', label: 'Access Token', placeholder: 'EAAxxxxxxxxxxxxxxxxxx', required: false },
+        { key: 'ad_account_id', label: 'Ad Account ID', placeholder: 'act_123456789012345', required: false }
+      ],
+      instructions: [
+        '1. Go to Meta for Developers (developers.facebook.com)',
+        '2. Create a new app or use existing',
+        '3. Add Marketing API product',
+        '4. Configure OAuth redirect to your domain',
+        '5. Generate access token with ads_management permission',
+        '6. Get your Ad Account ID from Meta Business Manager'
+      ],
+      docsUrl: 'https://developers.facebook.com/docs/marketing-apis/get-started'
+    },
     'linkedin-ads': {
       name: 'LinkedIn Ads',
       icon: '💼',
