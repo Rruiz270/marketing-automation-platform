@@ -1,5 +1,5 @@
 // AI Creative Performance Prediction & Intelligence System
-import OpenAI from 'openai';
+// OpenAI will be dynamically imported to avoid module loading errors
 
 // Creative performance prediction models
 const CREATIVE_MODELS = {
@@ -38,7 +38,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, data } = req.body;
+  const { action, data, companyData, projectData } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 creative-intelligence.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
 
   try {
     switch (action) {
@@ -132,7 +143,9 @@ async function analyzeVisualComponents(creative) {
   try {
     // Use OpenAI Vision API for image analysis (if available)
     if (creative.image_url) {
-      const openai = new OpenAI({
+      // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
+    const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY
       });
       
@@ -770,6 +783,8 @@ async function generateCreativeVariations(data, res) {
   const { original_creative, variation_count = 3, focus_areas } = data;
   
   try {
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });

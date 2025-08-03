@@ -6,6 +6,17 @@ export default async function handler(req, res) {
 
   try {
     const { companyData, projectData, previousSteps, connectedAIs, userId } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 performance-analyzer.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
     
     console.log('📈 Simple Performance Analyzer called');
 

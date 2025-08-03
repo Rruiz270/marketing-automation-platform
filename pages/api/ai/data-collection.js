@@ -11,6 +11,17 @@ export default async function handler(req, res) {
 
   try {
     const { action, platform, campaignIds } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 data-collection.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
 
     switch (action) {
       case 'collect_daily_data':

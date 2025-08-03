@@ -12,6 +12,17 @@ export default async function handler(req, res) {
 
   try {
     const { action } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 predictive-analytics.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
 
     switch (action) {
       case 'generate_predictions':

@@ -1,14 +1,27 @@
 // AI Campaign Structurer - Organize campaigns into optimal hierarchy for platform publishing
-import OpenAI from 'openai';
+// OpenAI will be dynamically imported to avoid module loading errors
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { strategy, mediaPlan, adCopy, creatives, companyProfile, ai_service, ai_service_name } = req.body;
+  const { strategy, mediaPlan, adCopy, creatives, companyProfile, ai_service, ai_service_name, companyData, projectData } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 campaign-structurer-backup.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
 
   try {
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY || 'demo-key'
     });

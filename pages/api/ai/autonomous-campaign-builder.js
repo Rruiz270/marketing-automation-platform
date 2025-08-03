@@ -1,5 +1,5 @@
 // Autonomous Campaign Builder - Full Campaign Creation from Objectives
-import OpenAI from 'openai';
+// OpenAI will be dynamically imported to avoid module loading errors
 import dbConnect from '../../../lib/mongodb';
 import Campaign from '../../../lib/models/Campaign';
 
@@ -93,7 +93,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, data } = req.body;
+  const { action, data, companyData, projectData } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 autonomous-campaign-builder.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
 
   try {
     switch (action) {
@@ -234,6 +245,8 @@ async function generateComprehensiveStrategy(objective, target_goal, budget, tem
   };
   
   try {
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
@@ -352,6 +365,8 @@ async function generateComprehensiveKeywords(template, strategy, audiences) {
   };
   
   try {
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
@@ -467,6 +482,8 @@ async function createCampaignCreatives(template, strategy, audiences) {
   };
   
   try {
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });

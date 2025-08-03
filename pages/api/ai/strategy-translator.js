@@ -28,6 +28,17 @@ export default async function handler(req, res) {
     ai_service_name 
   } = req.body;
   
+  // Log actual data being used
+  console.log('🎯 strategy-translator.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
+  
   console.log('Strategy Translator API called with:', {
     hasCompanyData: !!companyData,
     hasProjectData: !!projectData,

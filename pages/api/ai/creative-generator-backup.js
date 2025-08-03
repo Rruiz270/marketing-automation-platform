@@ -1,5 +1,5 @@
 // AI Creative Generator - Generate visual assets in correct formats for all platforms
-import OpenAI from 'openai';
+// OpenAI will be dynamically imported to avoid module loading errors
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,6 +7,17 @@ export default async function handler(req, res) {
   }
 
   const { companyData, projectData, previousSteps, connectedAIs, userId } = req.body;
+  
+  // Log actual data being used
+  console.log('🎯 creative-generator-backup.js called with data:', {
+    hasCompanyData: !!companyData,
+    hasProjectData: !!projectData,
+    companyName: companyData?.companyName,
+    projectName: projectData?.name,
+    projectObjectives: projectData?.objectives,
+    projectBudget: projectData?.budget,
+    selectedPlatforms: projectData?.platforms
+  });
   
   console.log('🎨 Creative Generator API called:', {
     hasCompanyData: !!companyData,
@@ -56,6 +67,8 @@ export default async function handler(req, res) {
       });
     }
 
+    // Dynamic import to avoid module loading errors
+    const { default: OpenAI } = await import('openai');
     const openai = new OpenAI({
       apiKey: apiKey
     });
