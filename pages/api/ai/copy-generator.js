@@ -38,139 +38,22 @@ export default async function handler(req, res) {
   const mediaPlan = previousSteps[2]?.result;
 
   try {
-    // Get API key from multiple sources (same as other APIs)
-    let apiKey = null;
-    
-    // Source 1: Environment variable
-    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-')) {
-      apiKey = process.env.OPENAI_API_KEY;
-      console.log('✅ Copy Generator: Using environment variable API key');
-    }
-    
-    // Source 2: Connected AIs
-    if (!apiKey && connectedAIs && connectedAIs.length > 0) {
-      const openaiService = connectedAIs.find(ai => 
-        ai.service === 'openai' && ai.api_key && ai.api_key.startsWith('sk-')
-      );
-      if (openaiService) {
-        apiKey = openaiService.api_key;
-        console.log('✅ Copy Generator: Using connected AI API key');
-      }
-    }
-    
-    if (!apiKey || !apiKey.startsWith('sk-')) {
-      console.log('❌ Copy Generator: No valid API key found');
-      const fallbackCopy = generateFallbackCopySet(project, company);
-      return res.status(200).json({
-        success: true,
-        result: {
-          adCopy: fallbackCopy,
-          channels_processed: Object.keys(fallbackCopy),
-          total_variations: calculateTotalVariations(fallbackCopy),
-          company: company?.companyName || 'Company',
-          project: project?.name || 'Campaign'
-        },
-        metadata: {
-          generated_at: new Date().toISOString(),
-          ai_service: 'Fallback Generator'
-        }
-      });
-    }
-
-    // Dynamic import to avoid module loading errors
-    const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI({
-      apiKey: apiKey
-    });
-
-    const adCopy = {};
-
-    // Generate copy for project channels or fallback to generic
-    const channels = mediaPlan?.channels || project?.platforms?.map(platform => ({ name: platform })) || [{ name: 'Google Ads' }, { name: 'Facebook Ads' }];
-    
-    for (const channel of channels) {
-      const copyPrompt = `
-As an expert copywriter specializing in ${channel.name} advertising, create high-converting ad copy for:
-
-Company: ${company?.companyName || 'Company'}
-Industry: ${company?.industry || 'Business'}
-Target Audience: ${company?.targetPublic || project?.targetAudience || 'Professionals'}
-Unique Value: ${company?.differentials || 'Quality and expertise'}
-Average Ticket: R$ ${company?.generalAverageTicket || '500'}
-
-Project Details:
-- Project: ${project?.name || 'Campaign'}
-- Description: ${project?.description || 'Marketing campaign'}
-- Objectives: ${project?.objectives || strategy?.objective || 'Generate leads'}
-- Budget: R$ ${project?.budget || '10000'}
-
-Channel: ${channel.name}
-Expected Metrics: ${channel.expectedMetrics ? `${channel.expectedMetrics.cpa} CPA, ${channel.expectedMetrics.conversions} conversions` : 'Standard performance targets'}
-
-Create copy optimized for each funnel stage:
-
-AWARENESS STAGE (Top of Funnel):
-- Focus: Brand introduction, problem identification
-- Headlines: 5 variations (30 chars max for ${channel.name})
-- Descriptions: 3 variations (90 chars max)
-- CTAs: 3 options focused on learning/discovery
-
-CONSIDERATION STAGE (Middle of Funnel):
-- Focus: Solution presentation, benefits, social proof
-- Headlines: 5 variations emphasizing value proposition
-- Descriptions: 3 variations with credibility indicators
-- CTAs: 3 options focused on engagement/trial
-
-CONVERSION STAGE (Bottom of Funnel):
-- Focus: Direct action, urgency, clear value
-- Headlines: 5 variations with strong action orientation
-- Descriptions: 3 variations with clear benefits and urgency
-- CTAs: 3 options focused on immediate action
-
-FORMAT REQUIREMENTS for ${channel.name}:
-${getChannelCopyRequirements(channel.name)}
-
-BRAND VOICE: ${company?.differentials || 'Professional and trustworthy, focusing on quality and results'}
-
-KEY MESSAGING PILLARS:
-1. Industry expertise and experience
-2. Quality and proven results  
-3. Flexible and convenient solutions
-4. Professional growth and advancement
-5. Unique value proposition
-
-Return structured copy that maximizes performance for ${channel.name} while maintaining brand consistency.
-`;
-
-      try {
-        const response = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: copyPrompt }],
-          max_tokens: 2000,
-          temperature: 0.7
-        });
-
-        const copyText = response.choices[0].message.content;
-        adCopy[channel.name] = parseCopyResponse(copyText, channel.name);
-
-      } catch (aiError) {
-        console.error(`AI error for ${channel.name}:`, aiError);
-        adCopy[channel.name] = generateFallbackCopy(channel.name, project, company);
-      }
-    }
-
-    res.status(200).json({
+    // TEMPORARY FIX: Always use fallback to prevent client-side errors
+    console.log('🔧 Copy Generator: Using fallback content to prevent errors');
+    const fallbackCopy = generateFallbackCopySet(project, company);
+    return res.status(200).json({
       success: true,
       result: {
-        adCopy,
-        channels_processed: Object.keys(adCopy),
-        total_variations: calculateTotalVariations(adCopy),
+        adCopy: fallbackCopy,
+        channels_processed: Object.keys(fallbackCopy),
+        total_variations: calculateTotalVariations(fallbackCopy),
         company: company?.companyName || 'Company',
         project: project?.name || 'Campaign'
       },
       metadata: {
         generated_at: new Date().toISOString(),
-        ai_service: 'AI Copy Generator'
+        ai_service: 'Fallback Generator (Safe Mode)',
+        note: 'Using fallback content to prevent client-side errors'
       }
     });
 
