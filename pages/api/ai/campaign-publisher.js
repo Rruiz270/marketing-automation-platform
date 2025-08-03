@@ -19,10 +19,11 @@ export default async function handler(req, res) {
           requirements: ['Google Ads account', 'Billing setup', 'Campaign approval']
         },
         {
-          name: 'Facebook Ads',
+          name: 'Meta Business',
           status: 'ready_to_connect', 
-          connection_url: 'https://business.facebook.com',
-          requirements: ['Business Manager', 'Ad Account', 'Pixel setup']
+          connection_url: '/advertising-platforms',
+          requirements: ['Meta Business account', 'Ad account access', 'Page admin rights'],
+          integration: 'native'
         }
       ],
       checklist: [

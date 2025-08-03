@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import OAuthPopup from './OAuthPopup';
+import MetaConnector from './MetaConnector';
 
 const AdvertisingPlatforms = ({ onUpdate }) => {
   const [connections, setConnections] = useState([]);
@@ -21,14 +22,15 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
       status: 'available'
     },
     {
-      id: 'facebook-ads',
-      name: 'Facebook Ads',
+      id: 'meta-business',
+      name: 'Meta Business',
       description: 'Facebook and Instagram advertising platform',
       icon: '📘',
       color: 'from-blue-600 to-indigo-700',
       features: ['Facebook Ads', 'Instagram Ads', 'Audience Network', 'Messenger Ads'],
       connectionType: 'OAuth2',
-      status: 'available'
+      status: 'available',
+      useCustomComponent: true
     },
     {
       id: 'linkedin-ads',
@@ -237,6 +239,22 @@ const AdvertisingPlatforms = ({ onUpdate }) => {
         {platforms.map((platform) => {
           const connected = isConnected(platform.id);
           const testing = isTesting(platform.id);
+          
+          // Use custom MetaConnector for Meta Business platform
+          if (platform.id === 'meta-business' && platform.useCustomComponent) {
+            return (
+              <motion.div
+                key={platform.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="md:col-span-2 lg:col-span-1"
+              >
+                <MetaConnector onConnectionChange={(isConnected) => {
+                  if (onUpdate) onUpdate();
+                }} />
+              </motion.div>
+            );
+          }
           
           return (
             <motion.div

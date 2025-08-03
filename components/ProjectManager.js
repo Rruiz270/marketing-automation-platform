@@ -15,7 +15,7 @@ const ProjectManager = ({ company, onClose, onProjectCreated }) => {
   });
 
   const availablePlatforms = [
-    'Google Ads', 'Facebook Ads', 'Instagram Ads', 'LinkedIn Ads', 
+    'Google Ads', 'Meta Business', 'Instagram Ads', 'LinkedIn Ads', 
     'Twitter Ads', 'TikTok Ads', 'Snapchat Ads', 'Pinterest Ads'
   ];
 
