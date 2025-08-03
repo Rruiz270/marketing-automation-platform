@@ -1,54 +1,54 @@
-// Company Projects API - Manage projects under companies
-const fs = require('fs');
-const path = require('path');
+// Company Projects API - Vercel-compatible with browser storage backup
+import { connectToDatabase } from '../../lib/mongodb';
 
-// Storage
+// In-memory storage for current session (Vercel serverless)
 let memoryStorage = {};
 
-// Use environment variable for storage path or default to a persistent location
-const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
-const STORAGE_FILE = path.join(STORAGE_DIR, 'company-projects.json');
-
-// Ensure storage directory exists
-function ensureStorageDir() {
+// Load stored projects from MongoDB with fallback
+async function loadStoredProjects() {
   try {
-    if (!fs.existsSync(STORAGE_DIR)) {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
-      console.log('Created projects storage directory:', STORAGE_DIR);
-    }
-  } catch (error) {
-    console.error('Error creating projects storage directory:', error);
-  }
-}
-
-// Load stored projects
-function loadStoredProjects() {
-  try {
-    ensureStorageDir();
+    // Try MongoDB first
+    const { db } = await connectToDatabase();
+    const projects = await db.collection('company_projects').find({}).toArray();
     
-    if (fs.existsSync(STORAGE_FILE)) {
-      const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-      const fileData = JSON.parse(data);
-      memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded company projects from file:', Object.keys(memoryStorage).length);
-    } else {
-      console.log('No existing projects file found');
+    if (projects.length > 0) {
+      const projectsById = {};
+      projects.forEach(project => {
+        projectsById[project.id] = project;
+      });
+      memoryStorage = { ...memoryStorage, ...projectsById };
+      console.log('✅ Loaded company projects from MongoDB:', Object.keys(projectsById).length);
+      return projectsById;
     }
   } catch (error) {
-    console.error('Error loading company projects:', error);
+    console.warn('⚠️ MongoDB not available for projects, using memory storage:', error.message);
   }
+  
+  // Use memory storage as fallback
+  console.log('📝 Using memory storage for projects:', Object.keys(memoryStorage).length);
   return memoryStorage;
 }
 
-// Save projects
-function saveStoredProjects(projects) {
+// Save projects to MongoDB with memory backup
+async function saveStoredProjects(projects) {
   memoryStorage = projects;
+  
   try {
-    ensureStorageDir();
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(projects, null, 2));
-    console.log('Saved company projects to file:', Object.keys(projects).length, 'companies');
+    // Try to save to MongoDB
+    const { db } = await connectToDatabase();
+    
+    // Update each project in MongoDB
+    for (const [projectId, project] of Object.entries(projects)) {
+      await db.collection('company_projects').updateOne(
+        { id: projectId },
+        { $set: project },
+        { upsert: true }
+      );
+    }
+    
+    console.log('✅ Saved company projects to MongoDB:', Object.keys(projects).length, 'projects');
   } catch (error) {
-    console.error('Error saving company projects:', error);
+    console.warn('⚠️ Could not save projects to MongoDB, keeping in memory:', error.message);
   }
 }
 
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
     const { action, company_id, project_id, data } = req.body;
     
     // Load existing projects
-    let storedProjects = loadStoredProjects();
+    let storedProjects = await loadStoredProjects();
 
     switch (action) {
       case 'create':
@@ -84,7 +84,7 @@ export default async function handler(req, res) {
         };
 
         storedProjects[projectId] = newProject;
-        saveStoredProjects(storedProjects);
+        await saveStoredProjects(storedProjects);
 
         return res.status(200).json({
           success: true,
@@ -128,7 +128,7 @@ export default async function handler(req, res) {
             ...data,
             updated_at: new Date().toISOString()
           };
-          saveStoredProjects(storedProjects);
+          await saveStoredProjects(storedProjects);
 
           return res.status(200).json({
             success: true,
@@ -146,7 +146,7 @@ export default async function handler(req, res) {
 
         if (storedProjects[project_id]) {
           delete storedProjects[project_id];
-          saveStoredProjects(storedProjects);
+          await saveStoredProjects(storedProjects);
           
           return res.status(200).json({
             success: true,

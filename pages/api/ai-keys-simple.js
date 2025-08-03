@@ -1,4 +1,6 @@
-// Persistent AI Keys API with localStorage fallback
+// Persistent AI Keys API with MongoDB storage
+import { connectToDatabase } from '../../lib/mongodb';
+
 const AI_SERVICES = {
   // TEXT/COPY AI SERVICES
   openai: {
@@ -97,57 +99,55 @@ const AI_SERVICES = {
 };
 
 // Persistent storage for AI keys
+
 let memoryStorage = {};
 
-const fs = require('fs');
-const path = require('path');
-
-// Use environment variable for storage path or default to a persistent location
-const STORAGE_DIR = process.env.STORAGE_PATH || path.join(process.cwd(), 'data');
-const STORAGE_FILE = path.join(STORAGE_DIR, 'ai-keys-storage.json');
-
-// Ensure storage directory exists
-function ensureStorageDir() {
+// Load stored keys from MongoDB with fallback
+async function loadStoredKeys() {
   try {
-    if (!fs.existsSync(STORAGE_DIR)) {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
-      console.log('Created AI keys storage directory:', STORAGE_DIR);
-    }
-  } catch (error) {
-    console.error('Error creating AI keys storage directory:', error);
-  }
-}
-
-// Load stored keys with fallback
-function loadStoredKeys() {
-  try {
-    ensureStorageDir();
+    // Try MongoDB first
+    const { db } = await connectToDatabase();
+    const keys = await db.collection('ai_keys').find({}).toArray();
     
-    if (fs.existsSync(STORAGE_FILE)) {
-      const data = fs.readFileSync(STORAGE_FILE, 'utf8');
-      const fileData = JSON.parse(data);
-      memoryStorage = { ...memoryStorage, ...fileData };
-      console.log('Loaded AI keys from file storage:', Object.keys(memoryStorage).length);
-    } else {
-      console.log('No existing AI keys file found');
+    if (keys.length > 0) {
+      const keysById = {};
+      keys.forEach(key => {
+        const keyId = `${key.user_id}_${key.service}`;
+        keysById[keyId] = key;
+      });
+      memoryStorage = { ...memoryStorage, ...keysById };
+      console.log('✅ Loaded AI keys from MongoDB:', Object.keys(keysById).length);
+      return keysById;
     }
   } catch (error) {
-    console.error('Error loading AI keys:', error);
+    console.warn('⚠️ MongoDB not available for AI keys, using memory storage:', error.message);
   }
   
+  // Use memory storage as fallback
+  console.log('📝 Using memory storage for AI keys:', Object.keys(memoryStorage).length);
   return memoryStorage;
 }
 
-// Save keys with dual storage
-function saveStoredKeys(keys) {
+// Save keys to MongoDB with memory backup
+async function saveStoredKeys(keys) {
   memoryStorage = keys;
   
   try {
-    ensureStorageDir();
-    fs.writeFileSync(STORAGE_FILE, JSON.stringify(keys, null, 2));
-    console.log('Saved AI keys to file storage:', Object.keys(keys).length, 'users');
+    // Try to save to MongoDB
+    const { db } = await connectToDatabase();
+    
+    // Update each key in MongoDB
+    for (const [keyId, keyData] of Object.entries(keys)) {
+      await db.collection('ai_keys').updateOne(
+        { user_id: keyData.user_id, service: keyData.service },
+        { $set: keyData },
+        { upsert: true }
+      );
+    }
+    
+    console.log('✅ Saved AI keys to MongoDB:', Object.keys(keys).length, 'keys');
   } catch (error) {
-    console.error('Error saving AI keys:', error);
+    console.warn('⚠️ Could not save AI keys to MongoDB, keeping in memory:', error.message);
   }
 }
 
@@ -161,7 +161,7 @@ export default async function handler(req, res) {
     console.log('Persistent AI Keys API called with:', { action, user_id, service, api_key: api_key ? 'provided' : 'missing' });
     
     // Load existing keys from persistent storage
-    let storedKeys = loadStoredKeys();
+    let storedKeys = await loadStoredKeys();
     console.log('Loaded stored keys:', Object.keys(storedKeys).length, 'keys found');
 
     switch (action) {
@@ -226,7 +226,7 @@ export default async function handler(req, res) {
           test_result: testResult
         };
 
-        saveStoredKeys(storedKeys);
+        await saveStoredKeys(storedKeys);
 
         console.log('API key saved successfully for:', service);
         return res.status(200).json({
@@ -258,7 +258,7 @@ export default async function handler(req, res) {
         storedKeys[toggleKeyId].status = storedKeys[toggleKeyId].enabled ? 'active' : 'disabled';
         storedKeys[toggleKeyId].updated_at = new Date().toISOString();
 
-        saveStoredKeys(storedKeys);
+        await saveStoredKeys(storedKeys);
 
         return res.status(200).json({
           success: true,
@@ -277,7 +277,7 @@ export default async function handler(req, res) {
         }
 
         delete storedKeys[disconnectKeyId];
-        saveStoredKeys(storedKeys);
+        await saveStoredKeys(storedKeys);
 
         return res.status(200).json({
           success: true,
@@ -342,7 +342,7 @@ export default async function handler(req, res) {
         // Ensure the key is stored with the correct ID
         storedKeys[defaultKeyId] = targetKey;
 
-        saveStoredKeys(storedKeys);
+        await saveStoredKeys(storedKeys);
 
         console.log('Successfully set default service:', service);
 
@@ -372,7 +372,7 @@ export default async function handler(req, res) {
 
         storedKeys[testKeyId].last_tested = new Date().toISOString();
         storedKeys[testKeyId].test_result = mockTestResult;
-        saveStoredKeys(storedKeys);
+        await saveStoredKeys(storedKeys);
 
         return res.status(200).json({
           success: true,

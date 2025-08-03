@@ -192,12 +192,37 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
 
   const loadProjects = async (userId) => {
     try {
+      console.log('Campaign Builder: Loading projects for company:', userId);
+      
+      // First, try to load from API
+      const response = await fetch('/api/company-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list',
+          company_id: userId
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Campaign Builder: Projects loaded from API:', data.projects?.length || 0);
+        setProjects(data.projects || []);
+        return;
+      }
+      
+      // Fallback to emergency recovery
+      console.log('Campaign Builder: API failed, trying emergency recovery...');
       const projectData = await emergencyRecoverProjectData(userId);
       if (projectData) {
+        console.log('Campaign Builder: Projects loaded from emergency backup:', projectData.projects?.length || 0);
         setProjects(projectData.projects || []);
+      } else {
+        console.log('Campaign Builder: No projects found');
+        setProjects([]);
       }
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.error('Campaign Builder: Error loading projects:', error);
       setProjects([]);
     }
   };
@@ -213,11 +238,17 @@ const ModernCampaignBuilder = ({ connectedAIs, onNavigate }) => {
     emergencyBackupProjectData(selectedCompany.user_id, project);
   };
 
-  const handleProjectCreated = (newProject) => {
+  const handleProjectCreated = async (newProject) => {
+    // Add to current state
     setProjects([...projects, newProject]);
     setSelectedProject(newProject);
     setShowProjectManager(false);
+    
+    // Save to emergency backup
     emergencyBackupProjectData(selectedCompany.user_id, newProject);
+    
+    // Reload projects from API to ensure persistence
+    await loadProjects(selectedCompany.user_id);
   };
 
   const processStep = async (stepId) => {
